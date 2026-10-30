@@ -1,0 +1,7 @@
+{
+  "name": "req2po",
+  "version": "1.0.0",
+  "description": "Requisition-to-PO and invoice matching layer for construction accounting, demonstrated on a mock ERP.",
+  "scripts": { "test": "node test/test.js", "build": "node build.js" },
+  "license": "MIT"
+}

@@ -1,0 +1,387 @@
+<header class="top">
+  <div class="wrap">
+    <div class="brand">REQ<b>2</b>PO</div>
+    <div class="demo-note">Demo on a mock ERP with fictional data. Dates are fixed at Oct 30, 2026 so the sample documents stay valid.</div>
+    <label class="who" for="role">Viewing as
+      <select id="role" aria-label="Viewing as">
+        <option value="clerk">AP clerk</option>
+        <option value="pm1">Project manager: Priya Raman</option>
+        <option value="pm2">Project manager: Marcus Webb</option>
+      </select></label>
+    <button class="btn-ghost small-btn" id="reset" type="button">Reset demo</button>
+  </div>
+  <nav class="tabs" aria-label="Sections"><div class="wrap">
+    <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#inbox" data-tab="inbox">Phase 1 · AP inbox</a>
+    <a href="#review" data-tab="review">Phase 1 · Review and entry<span class="n" id="rn" hidden>0</span></a>
+    <a href="#issues" data-tab="issues">Phase 1 · Issues and log</a>
+    <a href="#requisition" data-tab="requisition">Phase 2 · Requisition<span class="n" id="qn" hidden>0</span></a>
+    <a href="#statements" data-tab="statements">Phase 3 · Statements</a>
+    <a href="#erp" data-tab="erp">Mock ERP</a>
+  </div></nav>
+</header>
+
+<main class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section class="view" id="view-overview">
+  <div class="hero">
+    <h1>Modern controls around the ERP you already have.</h1>
+    <p>Replacing an old ERP costs money, retraining, downtime and migration risk, so most companies never do it. Req2PO builds the controls around it instead. Invoices are read, split, checked against the PO and reviewed before anyone enters them. The problems it finds are reported to the right person, tracked, and fixed at the source.</p>
+  </div>
+
+  <div class="phases">
+    <div class="card phase">
+      <div class="row"><h3>Phase 1</h3><span class="pill ok">Built in this demo</span></div>
+      <p><b>AP inbox and invoice controls</b></p>
+      <ul class="tight small">
+        <li>Sorts mail into invoices, statements and general correspondence, and files each to the vendor's folder</li>
+        <li>Splits PDFs that hold several invoices, reads each one, blocks duplicates</li>
+        <li>Compares every invoice with the PO: vendor ID, job, subtotal, tax and freight balances</li>
+        <li>A reviewer verifies the PDFs, a bot enters the invoice, the PM approves</li>
+        <li>Problems become reportable issues with a category, an owner and a feedback loop</li>
+      </ul>
+      <p class="small muted">First, because only AP changes how it works.</p>
+    </div>
+    <div class="card phase">
+      <div class="row"><h3>Phase 2</h3><span class="pill warn">Prototype in this demo</span></div>
+      <p><b>Requisition to PO</b></p>
+      <ul class="tight small">
+        <li>Project managers fill in one requisition and attach the quote</li>
+        <li>The quote is read and checked against the form</li>
+        <li>Every purchase is declared job, equipment or overhead, which sets the coding</li>
+        <li>Assets over the threshold are capitalized; costs covering a period are carried as prepaid</li>
+        <li>Rules decide, a bot writes the PO, and the ERP assigns the number</li>
+      </ul>
+      <p class="small muted">Second, because it needs project managers to adopt a new form. It also reduces the problems Phase 1 reports, and extends POs to overhead, which has none today.</p>
+    </div>
+    <div class="card phase planned">
+      <div class="row"><h3>Phase 3</h3><span class="pill idle">Planned, not built</span></div>
+      <p><b>Vendor statement reconciliation</b></p>
+      <ul class="tight small">
+        <li>Each vendor's statements go to a designated inbox</li>
+        <li>The statement is read and compared with what the ERP shows entered and paid</li>
+        <li>Differences go to a person to review, so nobody reconciles by hand</li>
+        <li>Runs weekly, biweekly or monthly. Biweekly or monthly is recommended</li>
+      </ul>
+      <p class="small muted">Third. Phase 1 already collects the statements.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin:16px 0">
+    <h3>How Phase 1 works</h3>
+    <div class="flow">
+      <div class="step"><b>1 · Inbox</b>Mail arrives. It is sorted into invoice, statement, reminder or correspondence and filed to the vendor's folder.</div>
+      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page. Each invoice is read, renamed and saved.</div>
+      <div class="step"><b>3 · Compare</b>Each invoice is compared with its PO, which refreshes from the ERP every 5 minutes. Differences are marked.</div>
+      <div class="step human"><b>4 · Report</b>If something does not match, the clerk reports it to the PM or purchaser, who responds.</div>
+      <div class="step human"><b>5 · Review</b>The reviewer checks the invoice PDF and the PO, then sends it to the bot.</div>
+      <div class="step"><b>6 · Enter</b>The bot enters it, re-checks the balance first, and reads back what it entered.</div>
+      <div class="step human"><b>7 · Approve</b>The PM sees the voucher with the PDF attached and approves or rejects it.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Checks and balances</h3>
+    <div class="layers">
+      <div><b>1 · Automated checks</b><span>15 checks per invoice. Each failed check is a reportable issue with a category.</span></div>
+      <div><b>2 · A person looks</b><span>The reviewer compares the invoice PDF with the PO before anything is entered.</span></div>
+      <div><b>3 · The bot verifies</b><span>It re-checks the balance at entry, reads back the voucher, and voids it if anything differs.</span></div>
+      <div><b>4 · The PM approves</b><span>The voucher arrives with the PDF attached. A rejection voids it and restores the PO.</span></div>
+      <div><b>5 · Everything is logged</b><span>Every action has an actor and a time. The issue report shows where the process breaks.</span></div>
+    </div>
+    <ul class="tight small" style="margin-top:12px">
+      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO or accept a difference, and each change needs a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
+      <li><b>Duplicates are blocked</b> across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>How the real build would run</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>In this demo</th><th>In the real build</th></tr></thead>
+      <tbody>
+        <tr><td>Shared AP mailbox and vendor folders</td><td>An Outlook shared mailbox and folders, with Power Automate flows that sort and file the mail</td></tr>
+        <tr><td>Sorting, splitting and reading documents</td><td>A document-reading AI step and a PDF splitting step, called from Power Automate</td></tr>
+        <tr><td>Invoice log and saved files</td><td>A SharePoint list for the extracted data and a SharePoint document library for the PDFs</td></tr>
+        <tr><td>PO data, refreshed every 5 minutes</td><td>A scheduled sync of purchase order data from the ERP into a SharePoint list</td></tr>
+        <tr><td>Review screen and PM response screen</td><td>A Power Apps app with one view for the clerk and one for the project manager</td></tr>
+        <tr><td>Checks and issue categories</td><td>The same rules inside the flows, with the categories stored as a SharePoint choice column</td></tr>
+        <tr><td>Issue report</td><td>Power BI or SharePoint views on the invoice log</td></tr>
+        <tr><td>Entry bot with read-back</td><td>UI automation of the ERP, taught from screenshots, that checks what it entered</td></tr>
+      </tbody></table></div>
+    <p class="small muted" style="margin-top:10px">This is the planned mapping. It is not built or tested in those tools here. This page is an HTML prototype of the logic and the screens.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Coding what has no job to code it to</h3>
+    <p class="small muted" style="margin-bottom:10px">A job purchase codes itself: the job and cost code decide the GL account. Overhead, SG&amp;A and equipment have no such structure, so today they are categorized by whoever happens to key the invoice. Phase 2 moves that decision to the requisition, before the purchase.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Three classes, declared up front.</b> Job related, equipment, or overhead and operating expense. The class decides whether the cost hits a job or the general ledger.</li>
+        <li><b>A list that covers the ordinary cases.</b> Materials, subcontract, rental, office supplies, repairs, software, insurance, professional fees, utilities — each carrying its GL account. "Other" is available, and has to be explained in writing.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Capitalize or expense.</b> An asset at or above the $2,500 threshold is coded to fixed assets and depreciated over its useful life, not expensed this period.</li>
+        <li><b>Expense or prepay.</b> A cost covering several months is carried to prepaid expenses and amortized across the periods it benefits, instead of overstating one month and understating the rest.</li>
+      </ul>
+    </div>
+    <p class="small muted" style="margin-top:10px">The system proposes the class, the account and the treatment from the purchase type, the amount and the period it covers. A person confirms it. Overhead coding is never auto-approved — the review is the control, and deciding it at the requisition means the treatment is settled before the PO exists rather than argued about at close.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>What an invoice stuck in the inbox actually costs</h3>
+    <p class="small muted" style="margin-bottom:10px">An invoice that cannot be entered is not a late payment. It is an unrecorded liability, and the damage spreads well past accounts payable.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Cost to date is understated.</b> Costs that belong to a job are not on it, so every figure built on cost to date is wrong.</li>
+        <li><b>Percent complete falls.</b> Under cost-to-cost, percent complete is cost incurred over total estimated cost. Missing cost means a lower percentage than the job has really reached.</li>
+        <li><b>Revenue is under-recognized.</b> A lower percent complete recognizes less revenue this period, and less gross profit with it on a profitable job. It reverses when the invoices land, so margin swings between periods on nothing but paperwork.</li>
+        <li><b>Overbillings are overstated.</b> With revenue under-recognized, billings in excess of costs and estimated earnings is larger than it should be, and the balance sheet carries a liability that is not really there.</li>
+        <li><b>The close slips.</b> The controller waits while somebody chases a PO, and the accrual is a guess until they stop chasing.</li>
+        <li><b>The job cost report misleads the other way.</b> It shows the job underrunning its budget, because the costs simply are not there yet. Nobody investigates a job that looks like it is coming in under.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Reporting inherits it.</b> The CFO reports figures that are not complete, and the correction lands in a later period as a journal entry.</li>
+        <li><b>Payments go late.</b> Fees, credit holds, and a vendor relationship spent on something avoidable.</li>
+        <li><b>Reconciliation absorbs the backlog.</b> A payment forces a pile of invoices in at once, which is where keying errors come from.</li>
+      </ul>
+    </div>
+    <p class="small muted" style="margin-top:10px">This is why the checks run at intake rather than at the end. Catching it here protects the completeness of the books, not just the AP queue.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Why a layer instead of a replacement</h3>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>The ERP stays the book of record.</b> No migration, no data move, no parallel run.</li>
+        <li><b>Nobody retrains.</b> Accountants keep the screens they know. Project managers get one simple form.</li>
+        <li><b>It works with a closed system.</b> Everything goes through one small adapter, so the ERP never needs plug-ins or integrations of its own.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>It fixes the expensive part first.</b> Most AP rework starts before the invoice: no PO, wrong job, wrong cost code, wrong vendor, tax errors.</li>
+        <li><b>It can be swapped later.</b> If the company ever changes ERPs, the requisition and invoice logic moves with it. Only the adapter changes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>What replacing the ERP would involve</h3>
+    <p class="small muted" style="margin-bottom:12px">Third-party estimates for small and mid-size companies, from consultant and vendor guides rather than independent surveys. Real quotes vary widely, and none of these figures are specific to one company's system.</p>
+    <div class="two-col">
+      <div>
+        <p class="small"><b>Money</b></p>
+        <ul class="tight small">
+          <li>Total first-year cost is commonly quoted at about $25,000 to $150,000 for small businesses and $100,000 to $750,000 for mid-market firms.</li>
+          <li>The software license is only about 15% to 25% of that. Services are often $1 to $1.50 for every software dollar.</li>
+          <li>Data migration is budgeted at roughly 5% to 20% of the project, and messy data adds more. Moving 8 or more years of history can pass $75,000 on its own.</li>
+          <li>Training for 10 to 30 users is quoted at $5,000 to $15,000 over 2 to 4 weeks.</li>
+          <li>One industry study found more than 80% of data migration projects run over time or budget, by about 30% on average.</li>
+          <li>Running the old and new systems side by side means paying for both for weeks or months.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="small"><b>Changes to the infrastructure around it</b></p>
+        <ul class="tight small">
+          <li>On-premise: servers, network hardware, operating system, database, storage and backup. Cloud: a subscription instead, plus a network check for bandwidth, latency, VPN and firewall readiness.</li>
+          <li>Every integration has to be listed and rebuilt. Mid-market firms often have 15 to 50.</li>
+          <li>Custom reports and any changes made directly to the database must be reimplemented.</li>
+          <li>Decide how many years of history to move. Most companies need 2 to 3, and archive the rest.</li>
+          <li>Pick the cutover date to avoid quarter-end and billing cycles.</li>
+        </ul>
+        <p class="small" style="margin-top:12px"><b>What the layer costs instead</b></p>
+        <p class="small">Not nothing. Someone has to build and maintain the ERP connection, host the tool, pay for document reading, and review exceptions. If the connection works by automating screens, an ERP update can break it. But there is no data migration, no retraining, and it can be rolled out one process at a time.</p>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:12px">Sources:
+      <a href="https://ecosire.com/blog/erp-implementation-cost-guide">Ecosire cost guide</a> ·
+      <a href="https://www.vjmglobal.com/feeds/blog/erp-implementation-cost">VJM Global</a> ·
+      <a href="https://erpresearch.com/erp-costs">ERPResearch</a> ·
+      <a href="https://qualimero.com/en/blog/erp-costs-price-tables-hidden-fees-how-to-save">Qualimero</a> ·
+      <a href="https://advaiya.com/?p=96383">Advaiya (Bloor Group data)</a> ·
+      <a href="https://erpresearch.com/en-us/infor-erp-migration-guide">ERPResearch migration guide</a> ·
+      <a href="https://www.itconvergence.com/blog/how-a-readiness-assessment-helps-you-plan-your-migration-to-cloud-erp/">IT Convergence</a> ·
+      <a href="https://www.techtarget.com/enterprise-software/feature/SaaS-ERP-systems-can-include-hidden-costs">TechTarget</a>
+    </p>
+  </div>
+
+
+  <div class="two-col" style="margin-top:16px">
+    <div class="card">
+      <h3>Try it</h3>
+      <div class="stack">
+        <div class="row"><a href="#inbox"><button class="primary" type="button">Open the AP inbox (13 emails)</button></a></div>
+        <div class="row"><a href="#requisition"><button type="button" data-go-scn="clean">Submit a clean requisition</button></a></div>
+      </div>
+      <p class="small muted" style="margin-top:10px">Tip: use "Viewing as" at the top to switch between the AP clerk and the project managers.</p>
+      <div class="counters" style="margin-top:16px" id="counters"></div>
+    </div>
+    <div class="card">
+      <h3>What is real and what is mocked</h3>
+      <p class="small"><b>Built and tested here</b> (<span id="testcount">59</span> automated tests)</p>
+      <ul class="tight small">
+        <li>Mail sorting, PDF splitting, reading, vendor matching against a fixed list</li>
+        <li>PO comparison, 15 checks, issue categories, reporting and PM-only PO changes</li>
+        <li>Reviewer verification, bot entry with read-back, PM approval, manual entry</li>
+        <li>Requisition form, quote cross-check, coding, tax, budget and approval rules</li>
+      </ul>
+      <p class="small" style="margin-top:12px"><b>Mocked or not built</b></p>
+      <ul class="tight small">
+        <li>The ERP is an in-memory stand-in. A real connection to the company's ERP is not built or tested.</li>
+        <li>Outlook is simulated by the sample inbox. PDFs are represented as text pages.</li>
+        <li>SharePoint, Power Automate and Power Apps are not built here. The log and library views are simulations.</li>
+        <li>Phase 3 statement reconciliation is described, not built.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1: INBOX ============ -->
+<section class="view" id="view-inbox">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 1 · AP inbox</h2><span class="pill ok">Built</span><span class="muted small">A simulated shared mailbox. Each email is sorted and filed, and each invoice is read and checked.</span></div>
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Inbox</h3><button class="primary small-btn" id="proc-all" type="button">Process all</button></div>
+        <div id="inbox"></div>
+      </div>
+      <div class="card">
+        <details><summary>Enter an invoice manually</summary>
+          <p class="small muted" style="margin:8px 0">For an invoice that did not come through the inbox. It is marked as a manual entry and goes through the same checks.</p>
+          <form id="manualform" class="fields" novalidate>
+            <div class="full"><label for="m-vendor">Vendor name</label><input id="m-vendor" list="vendorlist2" autocomplete="off"><datalist id="vendorlist2"></datalist></div>
+            <div><label for="m-no">Invoice number</label><input id="m-no"></div>
+            <div><label for="m-date">Invoice date</label><input id="m-date" type="date"></div>
+            <div><label for="m-po">PO number (if printed)</label><input id="m-po" placeholder="PO-26-0615"></div>
+            <div><label for="m-job">Job number (if printed)</label><input id="m-job" placeholder="24-101"></div>
+            <div><label for="m-sub">Subtotal</label><input id="m-sub" type="number" step="0.01"></div>
+            <div><label for="m-tax">Sales tax</label><input id="m-tax" type="number" step="0.01"></div>
+            <div><label for="m-fr">Freight</label><input id="m-fr" type="number" step="0.01"></div>
+            <div><label for="m-tot">Total</label><input id="m-tot" type="number" step="0.01"></div>
+          </form>
+          <div class="row" style="margin-top:10px"><button type="button" class="small-btn" id="manual-run">Add manual entry</button></div>
+          <div class="inline-err" id="manual-err"></div>
+        </details>
+        <details style="margin-top:12px"><summary>Try your own invoice text</summary>
+          <label for="own-inv" style="margin-top:8px">Paste invoice text</label>
+          <textarea id="own-inv" rows="8" placeholder="Vendor name on the first line, then Invoice No, Invoice Date, PO Number, a line table, Subtotal, Sales Tax, Freight, Total Due."></textarea>
+          <div class="row" style="margin-top:8px"><button type="button" id="own-run" class="small-btn">Process pasted invoice</button><button type="button" id="own-claude" class="small-btn" hidden>Process with Claude read</button></div>
+        </details>
+      </div>
+    </div>
+    <div class="card" id="mail-detail" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1: REVIEW ============ -->
+<section class="view" id="view-review">
+  <div class="row" style="margin-bottom:6px"><h2>Phase 1 · Review and entry</h2><span class="pill ok">Built</span></div>
+  <div class="row small muted" style="margin-bottom:14px"><span>PO data as of <b class="asof"></b>. Refreshes every 5 minutes.</span><button class="small-btn" type="button" data-act="refresh">Refresh now</button>
+    <label class="small" style="display:inline-flex;gap:6px;align-items:center;margin:0;font-weight:400"><input type="checkbox" id="glitch" style="width:auto"> Simulate a bot keying error on the next entry</label></div>
+  <div id="review"></div>
+</section>
+
+<!-- ============ PHASE 1: ISSUES AND LOG ============ -->
+<section class="view" id="view-issues">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 1 · Issues and log</h2><span class="pill ok">Built</span><span class="muted small">Where problems are counted, and where the data and files would live in SharePoint.</span></div>
+  <div id="issues"></div>
+</section>
+
+<section class="view" id="view-requisition">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 2 · Purchase requisition</h2><span class="pill warn">Prototype</span><span class="muted small">One form replaces a PO written by hand. It follows Phase 1 because it needs project managers to change how they work.</span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="small muted" style="margin-bottom:8px">Load an example</div>
+    <div class="scn" id="scn"></div>
+    <p class="small muted" id="scn-blurb" style="margin-top:8px"></p>
+  </div>
+  <div class="grid2">
+    <form class="card" id="reqform" novalidate>
+      <h3>Request</h3>
+      <div class="fields">
+        <div class="full"><label for="f-vendor">Vendor</label><input id="f-vendor" list="vendorlist" autocomplete="off"><datalist id="vendorlist"></datalist></div>
+        <div><label for="f-date">Date needed</label><input id="f-date" type="date"></div>
+        <div><label for="f-price">Estimated price before tax</label><input id="f-price" type="number" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label for="f-type">Purchase type</label><select id="f-type"><option value="">Choose</option><option value="material">Material</option><option value="equipment">Equipment</option><option value="subcontract">Subcontract</option><option value="other">Other</option></select></div>
+        <div><label for="f-subtype">What is being purchased</label><input id="f-subtype" placeholder="Short description"></div>
+        <div class="full"><label for="f-pclass">What kind of purchase is this?</label><select id="f-pclass"></select><div class="small muted" id="pclass-hint" style="margin-top:4px"></div></div>
+        <div class="full" data-cls="equipment overhead"><label for="f-ptype">What is being bought (sets the GL account)</label><select id="f-ptype"></select></div>
+        <div class="full" data-cls="equipment overhead" id="wrap-other" hidden><label for="f-other">Explain what this is</label><input id="f-other" placeholder="Needed so it can be categorized and reviewed"></div>
+        <div data-cls="equipment overhead"><label for="f-months">Months this covers</label><input id="f-months" type="number" min="0" step="1" placeholder="1"></div>
+        <div class="full" data-cls="job"><label for="f-job">Job</label><select id="f-job"></select></div>
+        <div data-cls="job"><label for="f-cc">Cost code</label><select id="f-cc"></select></div>
+        <div data-cls="job"><label for="f-cat">Cost category</label><select id="f-cat"></select></div>
+        <div class="full"><label for="f-notes">Notes (optional)</label><input id="f-notes"></div>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" type="submit" id="submit">Submit requisition</button>
+        <button type="button" id="precheck">Check only</button>
+      </div>
+      <div id="req-outcome" style="margin-top:16px" aria-live="polite"></div>
+    </form>
+
+    <div class="card">
+      <h3>Vendor quote</h3>
+      <label for="quote-text">Paste the quote text or choose a .txt file</label>
+      <textarea id="quote-text" rows="11" placeholder="Quote text appears here. Load an example above to see one."></textarea>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="read-quote">Read quote</button>
+        <button type="button" id="read-claude" hidden>Read with Claude</button>
+        <input type="file" id="quote-file" accept=".txt,text/plain" style="width:auto;max-width:210px;padding:5px" aria-label="Choose quote text file">
+      </div>
+      <div id="quote-read" style="margin-top:14px" aria-live="polite"></div>
+    </div>
+  </div>
+  <h3 style="margin:24px 0 8px">Requisition review queue</h3>
+  <div id="req-queue"></div>
+</section>
+
+
+<!-- ============ PHASE 3: STATEMENTS ============ -->
+<section class="view" id="view-statements">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 3 · Vendor statement reconciliation</h2><span class="pill idle">Planned, not built</span></div>
+  <div class="two-col">
+    <div class="card planned">
+      <h3>What it will do</h3>
+      <ol class="tight small">
+        <li>Each vendor's statements arrive in a designated inbox for that vendor.</li>
+        <li>The statement is read: each invoice, credit and payment it lists.</li>
+        <li>It is compared with what the ERP shows entered and paid for that vendor.</li>
+        <li>Differences are listed for a person to review. Nobody reconciles line by line by hand.</li>
+      </ol>
+      <p class="small" style="margin-top:12px"><b>How often it runs</b> is set by the organization:</p>
+      <div class="chips"><span class="chip">Weekly</span><span class="chip rec">Biweekly (recommended)</span><span class="chip rec">Monthly (recommended)</span></div>
+      <p class="small" style="margin-top:12px"><b>Differences it would report</b></p>
+      <ul class="tight small">
+        <li>On the statement, not in the ERP (a missing invoice)</li>
+        <li>In the ERP, not on the statement</li>
+        <li>Different amounts for the same invoice</li>
+        <li>Shown as open on the statement, but paid in the ERP</li>
+        <li>Credits not applied</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Statements collected by Phase 1 so far</h3>
+      <p class="small muted" style="margin-bottom:8px">Phase 1 recognizes statements and files them. It does not enter or reconcile them.</p>
+      <div id="statements"></div>
+      <h3 style="margin-top:20px">Illustration only</h3>
+      <p class="small muted" style="margin-bottom:8px">Made-up numbers, to show the kind of result a person would review. Not functional.</p>
+      <div class="scroll illus"><table>
+        <thead><tr><th>Statement line</th><th class="r">Statement</th><th class="r">ERP</th><th>Finding</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice A-1042</td><td class="r num">$1,200.00</td><td class="r num">$1,200.00</td><td><span class="pill ok">Agrees</span></td></tr>
+          <tr><td>Invoice A-1051</td><td class="r num">$860.50</td><td class="r num">not entered</td><td><span class="pill bad">Missing from ERP</span></td></tr>
+          <tr><td>Invoice A-1058</td><td class="r num">$2,400.00</td><td class="r num">$2,040.00</td><td><span class="pill warn">Amount differs</span></td></tr>
+          <tr><td>Invoice A-1063</td><td class="r num">$310.00 open</td><td class="r num">paid</td><td><span class="pill warn">Paid in ERP</span></td></tr>
+        </tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MOCK ERP ============ -->
+<section class="view" id="view-erp">
+  <div class="row" style="margin-bottom:6px"><h2>Mock ERP</h2><span class="muted small">What the bot sees and writes. Fictional data.</span></div>
+  <div class="row small muted" style="margin-bottom:14px"><span>PO data as of <b class="asof"></b>. Refreshes every 5 minutes.</span><button class="small-btn" type="button" data-act="refresh">Refresh now</button></div>
+  <div id="erp"></div>
+</section>
+
+</main>

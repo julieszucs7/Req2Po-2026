@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Req2PO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* Layout idea: a field-office desk. Dark nav bar like a job-trailer sign, concrete-grey work surface, burnt-orange for the one thing to do next. */
+:root{
+  --bg:#ECEFF2; --surface:#FFFFFF; --ink:#16202B; --muted:#586471; --line:#D3D9DF; --accent:#C2410C; --accent-ink:#FFFFFF; --nav:#16202B; --nav-ink:#E8EDF2;
+  --ok:#1B7A4B; --ok-bg:#E2F3EA; --warn:#8A5A00; --warn-bg:#FFF0C7; --bad:#B42318; --bad-bg:#FDE7E4; --code:#F5F7F9;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif; --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E141A; --surface:#17202A; --ink:#E6ECF1; --muted:#9AA7B3; --line:#2B3744; --accent:#FF8D55; --accent-ink:#1A0E06; --nav:#0A0F14; --nav-ink:#E6ECF1;
+  --ok:#5CD08F; --ok-bg:#12301F; --warn:#F2C65A; --warn-bg:#3A2E0B; --bad:#FF8C80; --bad-bg:#3C1815; --code:#111A22; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#17202A; --ink:#E6ECF1; --muted:#9AA7B3; --line:#2B3744; --accent:#FF8D55; --accent-ink:#1A0E06; --nav:#0A0F14; --nav-ink:#E6ECF1;
+  --ok:#5CD08F; --ok-bg:#12301F; --warn:#F2C65A; --warn-bg:#3A2E0B; --bad:#FF8C80; --bad-bg:#3C1815; --code:#111A22; color-scheme:dark;}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:44px} h2{font-size:28px} h3{font-size:20px}
+p{margin:0}
+a{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header.top{background:var(--nav);color:var(--nav-ink)}
+header.top .wrap{display:flex;align-items:center;gap:16px;padding-top:12px;padding-bottom:12px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:.02em}
+.brand b{color:var(--accent)}
+.demo-note{font-size:13px;opacity:.8;flex:1;min-width:220px}
+.btn-ghost{background:transparent;color:var(--nav-ink);border:1px solid rgba(255,255,255,.35)}
+nav.tabs{background:var(--nav);border-top:1px solid rgba(255,255,255,.1)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto}
+nav.tabs a{color:var(--nav-ink);text-decoration:none;padding:12px 16px;font-weight:500;white-space:nowrap;border-bottom:3px solid transparent;opacity:.75}
+nav.tabs a[aria-current="page"]{opacity:1;border-bottom-color:var(--accent)}
+nav.tabs .n{font-family:var(--mono);font-size:12px;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:1px 7px;margin-left:6px}
+
+main{padding:24px 0 64px}
+.view{display:none} .view.on{display:block}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)} h1{font-size:36px}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px}
+.card + .card{margin-top:16px}
+.card h3{margin-bottom:12px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+label{display:block;font-weight:600;font-size:13px;margin-bottom:4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+textarea{font-family:var(--mono);font-size:13px;line-height:1.45;resize:vertical}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fields .full{grid-column:1/-1}
+@media (max-width:520px){.fields{grid-template-columns:minmax(0,1fr)}}
+
+button{font:inherit;font-weight:600;border-radius:4px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.small-btn{padding:5px 10px;font-size:13px}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:10px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.idle{background:var(--code);color:var(--muted);border:1px solid var(--line)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.r,th.r{text-align:right}
+.scroll{overflow-x:auto}
+
+.notice{border-left:4px solid var(--line);background:var(--code);padding:12px 14px;border-radius:0 4px 4px 0}
+.notice.ok{border-color:var(--ok);background:var(--ok-bg)} .notice.warn{border-color:var(--warn);background:var(--warn-bg)} .notice.bad{border-color:var(--bad);background:var(--bad-bg)}
+.notice ul{margin:6px 0 0;padding-left:18px}
+.flag{padding:10px 0;border-top:1px solid var(--line)} .flag:first-child{border-top:0}
+.flag .code{font-family:var(--mono);font-size:12px;color:var(--warn);font-weight:500}
+.fix{color:var(--muted);font-size:13px}
+
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;counter-reset:s}
+@media (max-width:860px){.flow{grid-template-columns:minmax(0,1fr)}}
+.step{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:10px 12px;font-size:14px}
+.step b{display:block;font-family:var(--display);font-size:18px;letter-spacing:.01em}
+.step.human{border-color:var(--accent)}
+.lane{font-family:var(--mono);font-size:12px;color:var(--muted);margin:16px 0 6px}
+.principle{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+@media (max-width:860px){.principle{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.principle div{border-top:3px solid var(--accent);padding-top:8px;font-size:14px}
+.principle b{font-family:var(--display);font-size:20px;display:block}
+.hero{padding:8px 0 20px}
+.hero p{max-width:62ch;margin-top:10px;font-size:17px}
+.counters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.counters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.counters > div{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+.counters .v{font-family:var(--display);font-size:32px;line-height:1}
+.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:760px){.two-col{grid-template-columns:minmax(0,1fr)}}
+ul.tight{margin:6px 0 0;padding-left:18px} ul.tight li{margin:3px 0}
+
+.scn{display:flex;gap:8px;flex-wrap:wrap}
+.mail{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 0;border-top:1px solid var(--line);align-items:center}
+.mail:first-child{border-top:0}
+.mail.sel{background:var(--code);margin:0 -10px;padding-left:10px;padding-right:10px}
+.mail .sub{font-size:13px;color:var(--muted)}
+.pipe{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pipe .s{padding:6px 10px;border-radius:4px;font-size:13px;border:1px solid var(--line);background:var(--code)}
+.pipe .s.ok{border-color:var(--ok);color:var(--ok)} .pipe .s.bad{border-color:var(--bad);color:var(--bad)}
+.stepdetail{font-size:13px;color:var(--muted);margin:2px 0 0}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:10px;overflow-x:auto;font:12.5px/1.45 var(--mono);margin:8px 0 0;white-space:pre-wrap}
+.inline-err{color:var(--bad);font-size:13px;margin-top:4px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* ---- Phase 1 additions ---- */
+.who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin:0;color:var(--nav-ink)}
+.who select{width:auto;min-width:200px;padding:5px 8px}
+.phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:0}
+@media (max-width:860px){.phases{grid-template-columns:minmax(0,1fr)}}
+.phase{margin:0!important}
+.phase h3{margin:0}
+.phase > .row{justify-content:space-between;margin-bottom:6px}
+.planned{border-style:dashed}
+.layers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+@media (max-width:860px){.layers{grid-template-columns:minmax(0,1fr)}}
+.layers div{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:10px 12px;font-size:14px}
+.layers b{display:block;font-family:var(--display);font-size:18px}
+.layers span{color:var(--muted);font-size:13px}
+.flow{grid-template-columns:repeat(7,minmax(0,1fr))}
+@media (max-width:1000px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.flow{grid-template-columns:minmax(0,1fr)}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chip{border:1px solid var(--line);border-radius:14px;padding:3px 12px;font-size:13px;color:var(--muted)}
+.chip.rec{border-color:var(--accent);color:var(--ink)}
+.illus{border:1px dashed var(--line);border-radius:4px;padding:4px}
+table.cmp td.f{font-weight:600;white-space:nowrap}
+table.cmp tr.mismatch td{background:var(--bad-bg)}
+table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space:nowrap}
+.item{border:1px solid var(--line);border-radius:6px;padding:16px;margin-top:12px;background:var(--surface)}
+.item:first-child{margin-top:0}
+.item .hd{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.sect{margin:22px 0 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sect h3{margin:0}
+.reason{padding:8px 0;border-top:1px solid var(--line)}
+.reason:first-child{border-top:0}
+.reason .code{font-family:var(--mono);font-size:12px;color:var(--bad)}
+.resp{border-left:4px solid var(--ok);background:var(--ok-bg);padding:8px 12px;border-radius:0 4px 4px 0;margin-top:10px;font-size:14px}
+.sent{border-left:4px solid var(--warn);background:var(--warn-bg);padding:8px 12px;border-radius:0 4px 4px 0;margin-top:10px;font-size:14px}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.formgrid .full{grid-column:1/-1}
+@media (max-width:560px){.formgrid{grid-template-columns:minmax(0,1fr)}}
+.bar{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--code);border:1px solid var(--line)}
+.bar i{display:block;height:100%}
+.bar .o{background:var(--accent)} .bar .r{background:var(--ok)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:6px 0 10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tiles > div{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+.tiles .v{font-family:var(--display);font-size:34px;line-height:1}
+.catrow{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr) 70px;gap:12px;align-items:center;padding:5px 0}
+@media (max-width:560px){.catrow{grid-template-columns:minmax(0,1fr) 60px}.catrow .bar{grid-column:1/-1}}
+.path{font-family:var(--mono);font-size:12px;word-break:break-all}
+.mailtype{font-size:12px}
+.sel{background:var(--code)}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">REQ<b>2</b>PO</div>
+    <div class="demo-note">Demo on a mock ERP with fictional data. Dates are fixed at Oct 30, 2026 so the sample documents stay valid.</div>
+    <label class="who" for="role">Viewing as
+      <select id="role" aria-label="Viewing as">
+        <option value="clerk">AP clerk</option>
+        <option value="pm1">Project manager: Priya Raman</option>
+        <option value="pm2">Project manager: Marcus Webb</option>
+      </select></label>
+    <button class="btn-ghost small-btn" id="reset" type="button">Reset demo</button>
+  </div>
+  <nav class="tabs" aria-label="Sections"><div class="wrap">
+    <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#inbox" data-tab="inbox">Phase 1 · AP inbox</a>
+    <a href="#review" data-tab="review">Phase 1 · Review and entry<span class="n" id="rn" hidden>0</span></a>
+    <a href="#issues" data-tab="issues">Phase 1 · Issues and log</a>
+    <a href="#requisition" data-tab="requisition">Phase 2 · Requisition<span class="n" id="qn" hidden>0</span></a>
+    <a href="#statements" data-tab="statements">Phase 3 · Statements</a>
+    <a href="#erp" data-tab="erp">Mock ERP</a>
+  </div></nav>
+</header>
+
+<main class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section class="view" id="view-overview">
+  <div class="hero">
+    <h1>Modern controls around the ERP you already have.</h1>
+    <p>Replacing an old ERP costs money, retraining, downtime and migration risk, so most companies never do it. Req2PO builds the controls around it instead. Invoices are read, split, checked against the PO and reviewed before anyone enters them. The problems it finds are reported to the right person, tracked, and fixed at the source.</p>
+  </div>
+
+  <div class="phases">
+    <div class="card phase">
+      <div class="row"><h3>Phase 1</h3><span class="pill ok">Built in this demo</span></div>
+      <p><b>AP inbox and invoice controls</b></p>
+      <ul class="tight small">
+        <li>Sorts mail into invoices, statements and general correspondence, and files each to the vendor's folder</li>
+        <li>Splits PDFs that hold several invoices, reads each one, blocks duplicates</li>
+        <li>Compares every invoice with the PO: vendor ID, job, subtotal, tax and freight balances</li>
+        <li>A reviewer verifies the PDFs, a bot enters the invoice, the PM approves</li>
+        <li>Problems become reportable issues with a category, an owner and a feedback loop</li>
+      </ul>
+      <p class="small muted">First, because only AP changes how it works.</p>
+    </div>
+    <div class="card phase">
+      <div class="row"><h3>Phase 2</h3><span class="pill warn">Prototype in this demo</span></div>
+      <p><b>Requisition to PO</b></p>
+      <ul class="tight small">
+        <li>Project managers fill in one requisition and attach the quote</li>
+        <li>The quote is read and checked against the form</li>
+        <li>Every purchase is declared job, equipment or overhead, which sets the coding</li>
+        <li>Assets over the threshold are capitalized; costs covering a period are carried as prepaid</li>
+        <li>Rules decide, a bot writes the PO, and the ERP assigns the number</li>
+      </ul>
+      <p class="small muted">Second, because it needs project managers to adopt a new form. It also reduces the problems Phase 1 reports, and extends POs to overhead, which has none today.</p>
+    </div>
+    <div class="card phase planned">
+      <div class="row"><h3>Phase 3</h3><span class="pill idle">Planned, not built</span></div>
+      <p><b>Vendor statement reconciliation</b></p>
+      <ul class="tight small">
+        <li>Each vendor's statements go to a designated inbox</li>
+        <li>The statement is read and compared with what the ERP shows entered and paid</li>
+        <li>Differences go to a person to review, so nobody reconciles by hand</li>
+        <li>Runs weekly, biweekly or monthly. Biweekly or monthly is recommended</li>
+      </ul>
+      <p class="small muted">Third. Phase 1 already collects the statements.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin:16px 0">
+    <h3>How Phase 1 works</h3>
+    <div class="flow">
+      <div class="step"><b>1 · Inbox</b>Mail arrives. It is sorted into invoice, statement, reminder or correspondence and filed to the vendor's folder.</div>
+      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page. Each invoice is read, renamed and saved.</div>
+      <div class="step"><b>3 · Compare</b>Each invoice is compared with its PO, which refreshes from the ERP every 5 minutes. Differences are marked.</div>
+      <div class="step human"><b>4 · Report</b>If something does not match, the clerk reports it to the PM or purchaser, who responds.</div>
+      <div class="step human"><b>5 · Review</b>The reviewer checks the invoice PDF and the PO, then sends it to the bot.</div>
+      <div class="step"><b>6 · Enter</b>The bot enters it, re-checks the balance first, and reads back what it entered.</div>
+      <div class="step human"><b>7 · Approve</b>The PM sees the voucher with the PDF attached and approves or rejects it.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Checks and balances</h3>
+    <div class="layers">
+      <div><b>1 · Automated checks</b><span>15 checks per invoice. Each failed check is a reportable issue with a category.</span></div>
+      <div><b>2 · A person looks</b><span>The reviewer compares the invoice PDF with the PO before anything is entered.</span></div>
+      <div><b>3 · The bot verifies</b><span>It re-checks the balance at entry, reads back the voucher, and voids it if anything differs.</span></div>
+      <div><b>4 · The PM approves</b><span>The voucher arrives with the PDF attached. A rejection voids it and restores the PO.</span></div>
+      <div><b>5 · Everything is logged</b><span>Every action has an actor and a time. The issue report shows where the process breaks.</span></div>
+    </div>
+    <ul class="tight small" style="margin-top:12px">
+      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO or accept a difference, and each change needs a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
+      <li><b>Duplicates are blocked</b> across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>How the real build would run</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>In this demo</th><th>In the real build</th></tr></thead>
+      <tbody>
+        <tr><td>Shared AP mailbox and vendor folders</td><td>An Outlook shared mailbox and folders, with Power Automate flows that sort and file the mail</td></tr>
+        <tr><td>Sorting, splitting and reading documents</td><td>A document-reading AI step and a PDF splitting step, called from Power Automate</td></tr>
+        <tr><td>Invoice log and saved files</td><td>A SharePoint list for the extracted data and a SharePoint document library for the PDFs</td></tr>
+        <tr><td>PO data, refreshed every 5 minutes</td><td>A scheduled sync of purchase order data from the ERP into a SharePoint list</td></tr>
+        <tr><td>Review screen and PM response screen</td><td>A Power Apps app with one view for the clerk and one for the project manager</td></tr>
+        <tr><td>Checks and issue categories</td><td>The same rules inside the flows, with the categories stored as a SharePoint choice column</td></tr>
+        <tr><td>Issue report</td><td>Power BI or SharePoint views on the invoice log</td></tr>
+        <tr><td>Entry bot with read-back</td><td>UI automation of the ERP, taught from screenshots, that checks what it entered</td></tr>
+      </tbody></table></div>
+    <p class="small muted" style="margin-top:10px">This is the planned mapping. It is not built or tested in those tools here. This page is an HTML prototype of the logic and the screens.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Coding what has no job to code it to</h3>
+    <p class="small muted" style="margin-bottom:10px">A job purchase codes itself: the job and cost code decide the GL account. Overhead, SG&amp;A and equipment have no such structure, so today they are categorized by whoever happens to key the invoice. Phase 2 moves that decision to the requisition, before the purchase.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Three classes, declared up front.</b> Job related, equipment, or overhead and operating expense. The class decides whether the cost hits a job or the general ledger.</li>
+        <li><b>A list that covers the ordinary cases.</b> Materials, subcontract, rental, office supplies, repairs, software, insurance, professional fees, utilities — each carrying its GL account. "Other" is available, and has to be explained in writing.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Capitalize or expense.</b> An asset at or above the $2,500 threshold is coded to fixed assets and depreciated over its useful life, not expensed this period.</li>
+        <li><b>Expense or prepay.</b> A cost covering several months is carried to prepaid expenses and amortized across the periods it benefits, instead of overstating one month and understating the rest.</li>
+      </ul>
+    </div>
+    <p class="small muted" style="margin-top:10px">The system proposes the class, the account and the treatment from the purchase type, the amount and the period it covers. A person confirms it. Overhead coding is never auto-approved — the review is the control, and deciding it at the requisition means the treatment is settled before the PO exists rather than argued about at close.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>What an invoice stuck in the inbox actually costs</h3>
+    <p class="small muted" style="margin-bottom:10px">An invoice that cannot be entered is not a late payment. It is an unrecorded liability, and the damage spreads well past accounts payable.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Cost to date is understated.</b> Costs that belong to a job are not on it, so every figure built on cost to date is wrong.</li>
+        <li><b>Percent complete falls.</b> Under cost-to-cost, percent complete is cost incurred over total estimated cost. Missing cost means a lower percentage than the job has really reached.</li>
+        <li><b>Revenue is under-recognized.</b> A lower percent complete recognizes less revenue this period, and less gross profit with it on a profitable job. It reverses when the invoices land, so margin swings between periods on nothing but paperwork.</li>
+        <li><b>Overbillings are overstated.</b> With revenue under-recognized, billings in excess of costs and estimated earnings is larger than it should be, and the balance sheet carries a liability that is not really there.</li>
+        <li><b>The close slips.</b> The controller waits while somebody chases a PO, and the accrual is a guess until they stop chasing.</li>
+        <li><b>The job cost report misleads the other way.</b> It shows the job underrunning its budget, because the costs simply are not there yet. Nobody investigates a job that looks like it is coming in under.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Reporting inherits it.</b> The CFO reports figures that are not complete, and the correction lands in a later period as a journal entry.</li>
+        <li><b>Payments go late.</b> Fees, credit holds, and a vendor relationship spent on something avoidable.</li>
+        <li><b>Reconciliation absorbs the backlog.</b> A payment forces a pile of invoices in at once, which is where keying errors come from.</li>
+      </ul>
+    </div>
+    <p class="small muted" style="margin-top:10px">This is why the checks run at intake rather than at the end. Catching it here protects the completeness of the books, not just the AP queue.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Why a layer instead of a replacement</h3>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>The ERP stays the book of record.</b> No migration, no data move, no parallel run.</li>
+        <li><b>Nobody retrains.</b> Accountants keep the screens they know. Project managers get one simple form.</li>
+        <li><b>It works with a closed system.</b> Everything goes through one small adapter, so the ERP never needs plug-ins or integrations of its own.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>It fixes the expensive part first.</b> Most AP rework starts before the invoice: no PO, wrong job, wrong cost code, wrong vendor, tax errors.</li>
+        <li><b>It can be swapped later.</b> If the company ever changes ERPs, the requisition and invoice logic moves with it. Only the adapter changes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>What replacing the ERP would involve</h3>
+    <p class="small muted" style="margin-bottom:12px">Third-party estimates for small and mid-size companies, from consultant and vendor guides rather than independent surveys. Real quotes vary widely, and none of these figures are specific to one company's system.</p>
+    <div class="two-col">
+      <div>
+        <p class="small"><b>Money</b></p>
+        <ul class="tight small">
+          <li>Total first-year cost is commonly quoted at about $25,000 to $150,000 for small businesses and $100,000 to $750,000 for mid-market firms.</li>
+          <li>The software license is only about 15% to 25% of that. Services are often $1 to $1.50 for every software dollar.</li>
+          <li>Data migration is budgeted at roughly 5% to 20% of the project, and messy data adds more. Moving 8 or more years of history can pass $75,000 on its own.</li>
+          <li>Training for 10 to 30 users is quoted at $5,000 to $15,000 over 2 to 4 weeks.</li>
+          <li>One industry study found more than 80% of data migration projects run over time or budget, by about 30% on average.</li>
+          <li>Running the old and new systems side by side means paying for both for weeks or months.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="small"><b>Changes to the infrastructure around it</b></p>
+        <ul class="tight small">
+          <li>On-premise: servers, network hardware, operating system, database, storage and backup. Cloud: a subscription instead, plus a network check for bandwidth, latency, VPN and firewall readiness.</li>
+          <li>Every integration has to be listed and rebuilt. Mid-market firms often have 15 to 50.</li>
+          <li>Custom reports and any changes made directly to the database must be reimplemented.</li>
+          <li>Decide how many years of history to move. Most companies need 2 to 3, and archive the rest.</li>
+          <li>Pick the cutover date to avoid quarter-end and billing cycles.</li>
+        </ul>
+        <p class="small" style="margin-top:12px"><b>What the layer costs instead</b></p>
+        <p class="small">Not nothing. Someone has to build and maintain the ERP connection, host the tool, pay for document reading, and review exceptions. If the connection works by automating screens, an ERP update can break it. But there is no data migration, no retraining, and it can be rolled out one process at a time.</p>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:12px">Sources:
+      <a href="https://ecosire.com/blog/erp-implementation-cost-guide">Ecosire cost guide</a> ·
+      <a href="https://www.vjmglobal.com/feeds/blog/erp-implementation-cost">VJM Global</a> ·
+      <a href="https://erpresearch.com/erp-costs">ERPResearch</a> ·
+      <a href="https://qualimero.com/en/blog/erp-costs-price-tables-hidden-fees-how-to-save">Qualimero</a> ·
+      <a href="https://advaiya.com/?p=96383">Advaiya (Bloor Group data)</a> ·
+      <a href="https://erpresearch.com/en-us/infor-erp-migration-guide">ERPResearch migration guide</a> ·
+      <a href="https://www.itconvergence.com/blog/how-a-readiness-assessment-helps-you-plan-your-migration-to-cloud-erp/">IT Convergence</a> ·
+      <a href="https://www.techtarget.com/enterprise-software/feature/SaaS-ERP-systems-can-include-hidden-costs">TechTarget</a>
+    </p>
+  </div>
+
+
+  <div class="two-col" style="margin-top:16px">
+    <div class="card">
+      <h3>Try it</h3>
+      <div class="stack">
+        <div class="row"><a href="#inbox"><button class="primary" type="button">Open the AP inbox (13 emails)</button></a></div>
+        <div class="row"><a href="#requisition"><button type="button" data-go-scn="clean">Submit a clean requisition</button></a></div>
+      </div>
+      <p class="small muted" style="margin-top:10px">Tip: use "Viewing as" at the top to switch between the AP clerk and the project managers.</p>
+      <div class="counters" style="margin-top:16px" id="counters"></div>
+    </div>
+    <div class="card">
+      <h3>What is real and what is mocked</h3>
+      <p class="small"><b>Built and tested here</b> (<span id="testcount">80</span> automated tests)</p>
+      <ul class="tight small">
+        <li>Mail sorting, PDF splitting, reading, vendor matching against a fixed list</li>
+        <li>PO comparison, 15 checks, issue categories, reporting and PM-only PO changes</li>
+        <li>Reviewer verification, bot entry with read-back, PM approval, manual entry</li>
+        <li>Requisition form, quote cross-check, coding, tax, budget and approval rules</li>
+      </ul>
+      <p class="small" style="margin-top:12px"><b>Mocked or not built</b></p>
+      <ul class="tight small">
+        <li>The ERP is an in-memory stand-in. A real connection to the company's ERP is not built or tested.</li>
+        <li>Outlook is simulated by the sample inbox. PDFs are represented as text pages.</li>
+        <li>SharePoint, Power Automate and Power Apps are not built here. The log and library views are simulations.</li>
+        <li>Phase 3 statement reconciliation is described, not built.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1: INBOX ============ -->
+<section class="view" id="view-inbox">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 1 · AP inbox</h2><span class="pill ok">Built</span><span class="muted small">A simulated shared mailbox. Each email is sorted and filed, and each invoice is read and checked.</span></div>
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Inbox</h3><button class="primary small-btn" id="proc-all" type="button">Process all</button></div>
+        <div id="inbox"></div>
+      </div>
+      <div class="card">
+        <details><summary>Enter an invoice manually</summary>
+          <p class="small muted" style="margin:8px 0">For an invoice that did not come through the inbox. It is marked as a manual entry and goes through the same checks.</p>
+          <form id="manualform" class="fields" novalidate>
+            <div class="full"><label for="m-vendor">Vendor name</label><input id="m-vendor" list="vendorlist2" autocomplete="off"><datalist id="vendorlist2"></datalist></div>
+            <div><label for="m-no">Invoice number</label><input id="m-no"></div>
+            <div><label for="m-date">Invoice date</label><input id="m-date" type="date"></div>
+            <div><label for="m-po">PO number (if printed)</label><input id="m-po" placeholder="PO-26-0615"></div>
+            <div><label for="m-job">Job number (if printed)</label><input id="m-job" placeholder="24-101"></div>
+            <div><label for="m-sub">Subtotal</label><input id="m-sub" type="number" step="0.01"></div>
+            <div><label for="m-tax">Sales tax</label><input id="m-tax" type="number" step="0.01"></div>
+            <div><label for="m-fr">Freight</label><input id="m-fr" type="number" step="0.01"></div>
+            <div><label for="m-tot">Total</label><input id="m-tot" type="number" step="0.01"></div>
+          </form>
+          <div class="row" style="margin-top:10px"><button type="button" class="small-btn" id="manual-run">Add manual entry</button></div>
+          <div class="inline-err" id="manual-err"></div>
+        </details>
+        <details style="margin-top:12px"><summary>Try your own invoice text</summary>
+          <label for="own-inv" style="margin-top:8px">Paste invoice text</label>
+          <textarea id="own-inv" rows="8" placeholder="Vendor name on the first line, then Invoice No, Invoice Date, PO Number, a line table, Subtotal, Sales Tax, Freight, Total Due."></textarea>
+          <div class="row" style="margin-top:8px"><button type="button" id="own-run" class="small-btn">Process pasted invoice</button><button type="button" id="own-claude" class="small-btn" hidden>Process with Claude read</button></div>
+        </details>
+      </div>
+    </div>
+    <div class="card" id="mail-detail" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ PHASE 1: REVIEW ============ -->
+<section class="view" id="view-review">
+  <div class="row" style="margin-bottom:6px"><h2>Phase 1 · Review and entry</h2><span class="pill ok">Built</span></div>
+  <div class="row small muted" style="margin-bottom:14px"><span>PO data as of <b class="asof"></b>. Refreshes every 5 minutes.</span><button class="small-btn" type="button" data-act="refresh">Refresh now</button>
+    <label class="small" style="display:inline-flex;gap:6px;align-items:center;margin:0;font-weight:400"><input type="checkbox" id="glitch" style="width:auto"> Simulate a bot keying error on the next entry</label></div>
+  <div id="review"></div>
+</section>
+
+<!-- ============ PHASE 1: ISSUES AND LOG ============ -->
+<section class="view" id="view-issues">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 1 · Issues and log</h2><span class="pill ok">Built</span><span class="muted small">Where problems are counted, and where the data and files would live in SharePoint.</span></div>
+  <div id="issues"></div>
+</section>
+
+<section class="view" id="view-requisition">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 2 · Purchase requisition</h2><span class="pill warn">Prototype</span><span class="muted small">One form replaces a PO written by hand. It follows Phase 1 because it needs project managers to change how they work.</span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="small muted" style="margin-bottom:8px">Load an example</div>
+    <div class="scn" id="scn"></div>
+    <p class="small muted" id="scn-blurb" style="margin-top:8px"></p>
+  </div>
+  <div class="grid2">
+    <form class="card" id="reqform" novalidate>
+      <h3>Request</h3>
+      <div class="fields">
+        <div class="full"><label for="f-vendor">Vendor</label><input id="f-vendor" list="vendorlist" autocomplete="off"><datalist id="vendorlist"></datalist></div>
+        <div><label for="f-date">Date needed</label><input id="f-date" type="date"></div>
+        <div><label for="f-price">Estimated price before tax</label><input id="f-price" type="number" min="0" step="0.01" inputmode="decimal"></div>
+        <div><label for="f-type">Purchase type</label><select id="f-type"><option value="">Choose</option><option value="material">Material</option><option value="equipment">Equipment</option><option value="subcontract">Subcontract</option><option value="other">Other</option></select></div>
+        <div><label for="f-subtype">What is being purchased</label><input id="f-subtype" placeholder="Short description"></div>
+        <div class="full"><label for="f-pclass">What kind of purchase is this?</label><select id="f-pclass"></select><div class="small muted" id="pclass-hint" style="margin-top:4px"></div></div>
+        <div class="full" data-cls="equipment overhead"><label for="f-ptype">What is being bought (sets the GL account)</label><select id="f-ptype"></select></div>
+        <div class="full" data-cls="equipment overhead" id="wrap-other" hidden><label for="f-other">Explain what this is</label><input id="f-other" placeholder="Needed so it can be categorized and reviewed"></div>
+        <div data-cls="equipment overhead"><label for="f-months">Months this covers</label><input id="f-months" type="number" min="0" step="1" placeholder="1"></div>
+        <div class="full" data-cls="job"><label for="f-job">Job</label><select id="f-job"></select></div>
+        <div data-cls="job"><label for="f-cc">Cost code</label><select id="f-cc"></select></div>
+        <div data-cls="job"><label for="f-cat">Cost category</label><select id="f-cat"></select></div>
+        <div class="full"><label for="f-notes">Notes (optional)</label><input id="f-notes"></div>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" type="submit" id="submit">Submit requisition</button>
+        <button type="button" id="precheck">Check only</button>
+      </div>
+      <div id="req-outcome" style="margin-top:16px" aria-live="polite"></div>
+    </form>
+
+    <div class="card">
+      <h3>Vendor quote</h3>
+      <label for="quote-text">Paste the quote text or choose a .txt file</label>
+      <textarea id="quote-text" rows="11" placeholder="Quote text appears here. Load an example above to see one."></textarea>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="read-quote">Read quote</button>
+        <button type="button" id="read-claude" hidden>Read with Claude</button>
+        <input type="file" id="quote-file" accept=".txt,text/plain" style="width:auto;max-width:210px;padding:5px" aria-label="Choose quote text file">
+      </div>
+      <div id="quote-read" style="margin-top:14px" aria-live="polite"></div>
+    </div>
+  </div>
+  <h3 style="margin:24px 0 8px">Requisition review queue</h3>
+  <div id="req-queue"></div>
+</section>
+
+
+<!-- ============ PHASE 3: STATEMENTS ============ -->
+<section class="view" id="view-statements">
+  <div class="row" style="margin-bottom:14px"><h2>Phase 3 · Vendor statement reconciliation</h2><span class="pill idle">Planned, not built</span></div>
+  <div class="two-col">
+    <div class="card planned">
+      <h3>What it will do</h3>
+      <ol class="tight small">
+        <li>Each vendor's statements arrive in a designated inbox for that vendor.</li>
+        <li>The statement is read: each invoice, credit and payment it lists.</li>
+        <li>It is compared with what the ERP shows entered and paid for that vendor.</li>
+        <li>Differences are listed for a person to review. Nobody reconciles line by line by hand.</li>
+      </ol>
+      <p class="small" style="margin-top:12px"><b>How often it runs</b> is set by the organization:</p>
+      <div class="chips"><span class="chip">Weekly</span><span class="chip rec">Biweekly (recommended)</span><span class="chip rec">Monthly (recommended)</span></div>
+      <p class="small" style="margin-top:12px"><b>Differences it would report</b></p>
+      <ul class="tight small">
+        <li>On the statement, not in the ERP (a missing invoice)</li>
+        <li>In the ERP, not on the statement</li>
+        <li>Different amounts for the same invoice</li>
+        <li>Shown as open on the statement, but paid in the ERP</li>
+        <li>Credits not applied</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Statements collected by Phase 1 so far</h3>
+      <p class="small muted" style="margin-bottom:8px">Phase 1 recognizes statements and files them. It does not enter or reconcile them.</p>
+      <div id="statements"></div>
+      <h3 style="margin-top:20px">Illustration only</h3>
+      <p class="small muted" style="margin-bottom:8px">Made-up numbers, to show the kind of result a person would review. Not functional.</p>
+      <div class="scroll illus"><table>
+        <thead><tr><th>Statement line</th><th class="r">Statement</th><th class="r">ERP</th><th>Finding</th></tr></thead>
+        <tbody>
+          <tr><td>Invoice A-1042</td><td class="r num">$1,200.00</td><td class="r num">$1,200.00</td><td><span class="pill ok">Agrees</span></td></tr>
+          <tr><td>Invoice A-1051</td><td class="r num">$860.50</td><td class="r num">not entered</td><td><span class="pill bad">Missing from ERP</span></td></tr>
+          <tr><td>Invoice A-1058</td><td class="r num">$2,400.00</td><td class="r num">$2,040.00</td><td><span class="pill warn">Amount differs</span></td></tr>
+          <tr><td>Invoice A-1063</td><td class="r num">$310.00 open</td><td class="r num">paid</td><td><span class="pill warn">Paid in ERP</span></td></tr>
+        </tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MOCK ERP ============ -->
+<section class="view" id="view-erp">
+  <div class="row" style="margin-bottom:6px"><h2>Mock ERP</h2><span class="muted small">What the bot sees and writes. Fictional data.</span></div>
+  <div class="row small muted" style="margin-bottom:14px"><span>PO data as of <b class="asof"></b>. Refreshes every 5 minutes.</span><button class="small-btn" type="button" data-act="refresh">Refresh now</button></div>
+  <div id="erp"></div>
+</section>
+
+</main>
+
+<script>/*
+ * Req2PO core: requisition intake, quote reading + cross-check, PO coding rules,
+ * invoice intake + matching + checks, and a MOCK ERP behind a small adapter.
+ *
+ * Everything here runs in Node (tests) and in the browser (demo). No network calls.
+ * All vendor/job/PO data is fictional.
+ *
+ * ERP ADAPTER CONTRACT (what a real connector, for a legacy, closed ERP would implement):
+ *   findVendor(name) -> {vendor, suggestion, score}
+ *   getJob(id), getCostCode(code), getBudget(jobId, costCode)
+ *   createPO(draft)            -> po (ERP assigns the PO number)
+ *   getPO(number), findOpenPOs({vendorId, jobId})
+ *   invoiceExists(vendorId, invoiceNo)
+ *   postAPInvoice(invoice, po, journalEntry) -> voucher
+ * MockERP below implements it in memory. A real adapter is NOT included.
+ */
+(function (root) {
+  'use strict';
+
+  // ---------------------------------------------------------------- config
+  const CFG = {
+    taxRate: 0.07,          // fictional state + local rate on taxable purchases
+    autoApproveMax: 5000,   // clean requisitions at or under this total skip human review
+    quoteTolerance: 0.01,   // 1% between form price and quote subtotal
+    invoiceTolerance: 5.0,  // dollars over remaining PO balance allowed
+    taxTolerance: 0.05,     // dollars of rounding allowed on tax
+    dupWindowDays: 14
+  };
+
+  const CATEGORIES = { M: 'Material', E: 'Equipment', S: 'Subcontract', L: 'Labor', O: 'Other' };
+  const TYPE_TO_CAT = { material: 'M', equipment: 'E', subcontract: 'S', other: 'O' };
+  const GL = {
+    M: { acct: '5100', name: 'Job materials' },
+    E: { acct: '5200', name: 'Equipment rental' },
+    S: { acct: '5300', name: 'Subcontract costs' },
+    L: { acct: '5400', name: 'Direct labor' },
+    O: { acct: '5900', name: 'Other job costs' }
+  };
+  const TAXABLE_CATS = { M: true, E: true, O: true, S: false, L: false };
+
+  /* ---------------------------------------------------------------- purchase classification
+     Job-related purchases code themselves: the job and cost code decide the GL
+     account. Overhead, SG&A and equipment have no such structure, so they get
+     categorized by whoever happens to key the invoice. Phase 2 moves that
+     decision to the requisition, before the purchase, and makes the two
+     treatments that people get wrong explicit:
+       - an asset bought above the capitalization threshold is capitalized and
+         depreciated, not expensed;
+       - a cost covering more than one period is carried as a prepaid expense
+         and amortized across the periods it benefits.
+     The system proposes. A person still decides. */
+  const CAP_THRESHOLD = 2500;            // fictional capitalization policy
+  const PREPAID = { acct: '1400', name: 'Prepaid expenses' };
+  const PCLASS = {
+    job:       { label: 'Job related (direct job cost)', needsJob: true, hint: 'Costs that belong to a job and appear in job cost.' },
+    equipment: { label: 'Equipment', needsJob: false, hint: 'Owned equipment, vehicles, parts and repairs. May be capital.' },
+    overhead:  { label: 'Overhead, indirect and operating expense', needsJob: false, hint: 'Runs the company rather than a job. SG&A.' }
+  };
+  const PTYPES = [
+    { id: 'job_material',  cls: 'job',       label: 'Materials for a job',               gl: '5100', name: 'Job materials',           cat: 'M' },
+    { id: 'job_sub',       cls: 'job',       label: 'Subcontract work',                  gl: '5300', name: 'Subcontract costs',       cat: 'S' },
+    { id: 'job_rental',    cls: 'job',       label: 'Equipment rental for a job',        gl: '5200', name: 'Equipment rental',        cat: 'E' },
+    { id: 'job_other',     cls: 'job',       label: 'Other job cost',                    gl: '5900', name: 'Other job costs',         cat: 'O' },
+    { id: 'equip_buy',     cls: 'equipment', label: 'Equipment purchase (owned)',        gl: '6700', name: 'Equipment expense',       capital: true, life: '5 years' },
+    { id: 'vehicle',       cls: 'equipment', label: 'Vehicle purchase',                  gl: '6700', name: 'Equipment expense',       capital: true, life: '5 years' },
+    { id: 'equip_repair',  cls: 'equipment', label: 'Equipment repair',                  gl: '6400', name: 'Repairs and maintenance' },
+    { id: 'equip_parts',   cls: 'equipment', label: 'Parts and small tools',             gl: '6410', name: 'Small tools and parts',   capital: true, life: '3 years' },
+    { id: 'office',        cls: 'overhead',  label: 'Office supplies',                   gl: '6100', name: 'Office supplies' },
+    { id: 'facility_rm',   cls: 'overhead',  label: 'Repairs and maintenance (facility)', gl: '6400', name: 'Repairs and maintenance' },
+    { id: 'software',      cls: 'overhead',  label: 'Software or subscription',          gl: '6200', name: 'Software and subscriptions', periodic: true },
+    { id: 'insurance',     cls: 'overhead',  label: 'Insurance',                         gl: '6300', name: 'Insurance',               periodic: true },
+    { id: 'service',       cls: 'overhead',  label: 'Service or maintenance contract',   gl: '6400', name: 'Repairs and maintenance', periodic: true },
+    { id: 'prof_fees',     cls: 'overhead',  label: 'Professional fees',                 gl: '6500', name: 'Professional fees' },
+    { id: 'utilities',     cls: 'overhead',  label: 'Utilities',                         gl: '6600', name: 'Utilities',               periodic: true },
+    { id: 'oh_other',      cls: 'overhead',  label: 'Other (explain)',                   gl: '6900', name: 'Other operating expense', needsReason: true }
+  ];
+  const ptypeById = function (id) { return PTYPES.filter(function (t) { return t.id === id; })[0] || null; };
+  const CAPITAL_ACCT = { acct: '1500', name: 'Machinery and equipment' };
+
+
+  // ---------------------------------------------------------------- helpers
+  function r2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+  function pm(s) {
+    if (s === null || s === undefined || s === '') return null;
+    const n = parseFloat(String(s).replace(/[$,\s]/g, ''));
+    return isNaN(n) ? null : n;
+  }
+  function usd(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function isoDate(s) {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0');
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  }
+  function dayDiff(a, b) {
+    return Math.round((Date.parse(a + 'T00:00:00Z') - Date.parse(b + 'T00:00:00Z')) / 86400000);
+  }
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  const STOP = new Set(['inc', 'llc', 'co', 'corp', 'company', 'the', 'ltd', 'and']);
+  function normName(s) {
+    return String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ')
+      .split(/\s+/).filter(function (t) { return t && !STOP.has(t); }).join(' ');
+  }
+  function lev(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    let prev = []; for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+  function similarity(a, b) {
+    const na = normName(a), nb = normName(b);
+    if (!na || !nb) return 0;
+    if (na === nb) return 1;
+    const ta = new Set(na.split(' ')), tb = new Set(nb.split(' '));
+    let inter = 0; ta.forEach(function (t) { if (tb.has(t)) inter++; });
+    const jac = inter / (ta.size + tb.size - inter);
+    const subset = (inter === ta.size || inter === tb.size) ? 0.9 : 0;
+    const ratio = 1 - lev(na, nb) / Math.max(na.length, nb.length);
+    return Math.max(jac, ratio, subset);
+  }
+  function normInvoiceNo(s) {
+    return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^0+/, '');
+  }
+  function descOverlap(a, b) {
+    const ta = (String(a).toLowerCase().match(/[a-z0-9]{3,}/g) || []);
+    const tb = new Set(String(b).toLowerCase().match(/[a-z0-9]{3,}/g) || []);
+    if (!ta.length || !tb.size) return 0;
+    let hit = 0; ta.forEach(function (t) { if (tb.has(t)) hit++; });
+    return hit / Math.min(ta.length, tb.size);
+  }
+  function sum(arr) { return r2(arr.reduce(function (s, x) { return s + x; }, 0)); }
+
+  function expectedTax(job, category, subtotal) {
+    if (!job || job.taxExempt) return 0;
+    if (!TAXABLE_CATS[category]) return 0;
+    return r2(subtotal * CFG.taxRate);
+  }
+
+  // ---------------------------------------------------------------- issue categories (reportable problems)
+  // owner: 'purchaser' = the PO's project manager / original purchaser, 'setup' = vendor setup, 'ap' = the AP clerk
+  const ISSUES = {
+    EXTRACT:         { label: 'Could not read the invoice', owner: 'ap' },
+    SPLIT:           { label: 'Multi-invoice split needs confirming', owner: 'ap' },
+    VENDOR_UNKNOWN:  { label: 'Vendor not on the vendor list', owner: 'setup' },
+    NO_PO:           { label: 'No purchase order found', owner: 'purchaser' },
+    VENDOR_MISMATCH: { label: 'Vendor ID does not match the PO', owner: 'purchaser' },
+    PO_CLOSED:       { label: 'PO is closed', owner: 'purchaser' },
+    JOB_MISMATCH:    { label: 'Job does not match the PO', owner: 'purchaser' },
+    DUPLICATE:       { label: 'Duplicate invoice', owner: 'ap' },
+    MATH:            { label: 'Invoice does not add up', owner: 'purchaser' },
+    TAX_RATE:        { label: 'Incorrect sales tax rate', owner: 'purchaser' },
+    PO_SHORT:        { label: 'Not enough $ left on the PO', owner: 'purchaser' },
+    TAX_SHORT:       { label: 'Sales tax does not match the PO', owner: 'purchaser' },
+    FREIGHT:         { label: 'Freight not covered by the PO', owner: 'purchaser' },
+    ITEM_MISMATCH:   { label: 'Billed items not on the PO', owner: 'purchaser' },
+    DATE:            { label: 'Invoice date problem', owner: 'purchaser' },
+    REVIEW_FOUND:    { label: 'Reviewer found a discrepancy', owner: 'purchaser' },
+    ENTRY_FAILED:    { label: 'Bot entry did not match the invoice', owner: 'ap' },
+    PM_REJECTED:     { label: 'Rejected by the PM after entry', owner: 'purchaser' }
+  };
+  const OVERRIDABLE = { ITEM_MISMATCH: true, DATE: true };   // differences a PM may accept as valid without changing the PO
+  const JOB_PM = { '24-101': 'Priya Raman', '24-107': 'Marcus Webb', '23-088': 'Priya Raman' };
+  function pad(n, w) { return String(n).padStart(w || 3, '0'); }
+  function poRemaining(po) {
+    return { sub: r2(po.subtotal - po.billedSub), tax: r2(po.tax - po.billedTax), freight: r2((po.freight || 0) - po.billedFreight), total: r2(po.total - po.billed) };
+  }
+
+  // ---------------------------------------------------------------- seed data (fictional)
+  function seedData() {
+    return {
+      vendors: [
+        { id: 'V100', name: 'Ridgeline Concrete Supply', aliases: ['Ridgeline Concrete'], emails: ['accounts@ridgelineconcrete.example'], folder: 'AP/Vendors/Ridgeline Concrete Supply', types: ['material', 'equipment'], terms: 'Net 30' },
+        { id: 'V101', name: 'Summit Equipment Rentals', aliases: ['Summit Rentals'], emails: ['ar@summitrentals.example'], folder: 'AP/Vendors/Summit Equipment Rentals', types: ['equipment'], terms: 'Net 30' },
+        { id: 'V102', name: 'Harbor Electrical Wholesale', aliases: [], emails: ['ar@harborelectric.example'], folder: 'AP/Vendors/Harbor Electrical Wholesale', types: ['material'], terms: 'Net 30' },
+        { id: 'V103', name: 'Keystone Steel & Rebar', aliases: ['Keystone Steel'], emails: ['ar@keystonesteel.example'], folder: 'AP/Vendors/Keystone Steel and Rebar', types: ['material'], terms: 'Net 45' },
+        { id: 'V104', name: 'Metro Safety Supply', aliases: [], emails: ['billing@metrosafety.example'], folder: 'AP/Vendors/Metro Safety Supply', types: ['material', 'other'], terms: 'Net 30' },
+        { id: 'V105', name: 'Northgate Paving LLC', aliases: [], emails: [], folder: 'AP/Vendors/Northgate Paving', types: ['subcontract'], terms: 'Net 30' },
+        { id: 'V106', name: 'Harbor Mechanical Services', aliases: [], emails: ['billing@harbormechanical.example'], folder: 'AP/Vendors/Harbor Mechanical Services', types: ['equipment', 'material'], terms: 'Net 30' }
+      ],
+      jobs: [
+        { id: '24-101', name: 'Riverside Medical Office', status: 'open', taxExempt: false, pm: 'Priya Raman' },
+        { id: '24-107', name: 'Elm Street Warehouse', status: 'open', taxExempt: true, pm: 'Marcus Webb' },
+        { id: '23-088', name: 'County Library Renovation', status: 'closed', taxExempt: false, pm: 'Priya Raman' }
+      ],
+      costCodes: [
+        { code: '01-500', desc: 'Temporary facilities and equipment', categories: ['E'] },
+        { code: '01-560', desc: 'Safety and jobsite supplies', categories: ['M', 'O'] },
+        { code: '03-300', desc: 'Cast-in-place concrete', categories: ['M', 'S', 'E'] },
+        { code: '05-120', desc: 'Structural steel and rebar', categories: ['M', 'S'] },
+        { code: '16-100', desc: 'Electrical', categories: ['M', 'S'] },
+        { code: '31-200', desc: 'Earthwork', categories: ['S', 'E'] }
+      ],
+      budgets: {
+        '24-101|01-500': { budget: 18000, committed: 4815 },
+        '24-101|01-560': { budget: 9000, committed: 3200 + 1712 },
+        '24-101|05-120': { budget: 30000, committed: 0 },
+        '24-101|03-300': { budget: 85000, committed: 52000 + 9501.6 },
+        '24-101|16-100': { budget: 42000, committed: 5350 },
+        '24-107|05-120': { budget: 40000, committed: 38500 },
+        '24-107|31-200': { budget: 25000, committed: 0 },
+        '24-107|01-500': { budget: 20000, committed: 3600 }
+      },
+      pos: [
+        mkPO('PO-26-0601', 'V100', '24-101', '03-300', 'M', '2026-10-05', [
+          ['Ready-mix concrete 4000 PSI', 60, 'CY', 148.0]]),
+        mkPO('PO-26-0604', 'V102', '24-101', '16-100', 'M', '2026-10-07', [
+          ['Panelboard 200A 42-circuit', 1, 'EA', 2350.0],
+          ['Breakers 20A single-pole', 30, 'EA', 35.0],
+          ['EMT conduit 3/4 in', 800, 'LF', 2.0]], 2350.0, 85.0),
+        mkPO('PO-26-0607', 'V101', '24-101', '01-500', 'E', '2026-10-09', [
+          ['Scissor lift rental 4 weeks', 4, 'WK', 1125.0]], 2250.0),
+        mkPO('PO-26-0611', 'V103', '24-107', '05-120', 'M', '2026-10-12', [
+          ['Rebar #5 grade 60', 20000, 'LB', 0.5]], 0, 250.0),
+        mkPO('PO-26-0612', 'V101', '24-107', '01-500', 'E', '2026-10-13', [
+          ['Telehandler rental 2 weeks', 2, 'WK', 1800.0]]),
+        mkPO('PO-26-0615', 'V104', '24-101', '01-560', 'M', '2026-10-14', [
+          ['Safety netting and guardrail posts', 1, 'LS', 1600.0]])
+      ],
+      apInvoices: [
+        { voucher: 'AP-26-0412', vendorId: 'V102', invoiceNo: 'HW-30418', invoiceNoNorm: normInvoiceNo('HW-30418'), date: '2026-10-15', total: 2514.5, poNumber: 'PO-26-0604' },
+        { voucher: 'AP-26-0415', vendorId: 'V101', invoiceNo: 'SE-2201', invoiceNoNorm: normInvoiceNo('SE-2201'), date: '2026-10-20', total: 2407.5, poNumber: 'PO-26-0607' }
+      ],
+      poSeq: 617,
+      voucherSeq: 417
+    };
+  }
+  function mkPO(number, vendorId, jobId, costCode, category, created, lines, billedSub, freight) {
+    const ls = lines.map(function (l) { return { desc: l[0], qty: l[1], unit: l[2], unitPrice: l[3], amount: r2(l[1] * l[3]) }; });
+    const subtotal = sum(ls.map(function (l) { return l.amount; }));
+    const taxable = jobId !== '24-107' && TAXABLE_CATS[category];
+    const tax = taxable ? r2(subtotal * CFG.taxRate) : 0;
+    const fr = freight || 0, bSub = billedSub || 0, bTax = taxable ? r2(bSub * CFG.taxRate) : 0;
+    return {
+      number: number, vendorId: vendorId, jobId: jobId, status: 'open', createdDate: created, dateNeeded: created,
+      reqId: null, purchaser: JOB_PM[jobId] || 'Unassigned', lines: ls, subtotal: subtotal, tax: tax, freight: fr, total: r2(subtotal + tax + fr),
+      billedSub: bSub, billedTax: bTax, billedFreight: 0, billed: r2(bSub + bTax),
+      coding: { costCode: costCode, category: category, gl: GL[category].acct }
+    };
+  }
+
+  // ---------------------------------------------------------------- vendor matching
+  // Rules (written from the AP workflow): match against name AND every alias; ignore legal suffixes,
+  // punctuation, "&" vs "and", dba wording; a branch suffix only counts if the list has that branch;
+  // companies sharing one generic word are NOT a match; sender address is strong evidence, except
+  // billing platforms (hint only) and internal forwards (ignored); ties and near-ties match nothing.
+  const GENERIC = new Set(['supply', 'supplies', 'electric', 'electrical', 'mechanical', 'services', 'service', 'wholesale', 'equipment', 'rentals', 'rental', 'solutions', 'parts', 'building', 'group', 'industries', 'contracting', 'construction']);
+  /* Invoices often arrive through a third-party billing portal rather than from
+     the vendor's own domain, so the sender address is a hint about the vendor,
+     never proof. Fictional domains here; a real build would list the portals
+     that company actually receives mail from. */
+  const PLATFORMS = ['billingportal.example', 'invoicehub.example', 'apexchange.example'];
+  const INTERNAL_DOMAIN = '@ourcompany.example';
+  function variants(s) {
+    const out = [];
+    String(s || '').split(/\s+(?:dba|d\/b\/a|t\/a)\s+/i).forEach(function (part) {
+      out.push({ text: part, cap: 1 });
+      const base = part.split(/\s[-\u2013]\s/)[0];
+      if (base !== part) out.push({ text: base, cap: 0.95 });
+    });
+    return out;
+  }
+  function pairScore(a, b) {
+    const na = normName(a), nb = normName(b);
+    if (!na || !nb) return 0;
+    if (na === nb) return 1;
+    const ta = na.split(' '), tb = nb.split(' ');
+    const small = new Set(ta.length <= tb.length ? ta : tb), big = new Set(ta.length <= tb.length ? tb : ta);
+    if (Array.from(small).every(function (t) { return big.has(t); })) {
+      const extras = Array.from(big).filter(function (t) { return !small.has(t); });
+      return extras.every(function (t) { return GENERIC.has(t); }) ? 0.9 : 0.5;
+    }
+    const ratio = 1 - lev(na, nb) / Math.max(na.length, nb.length);
+    if (ratio >= 0.9) return 0.9;
+    const sa = new Set(ta), sb = new Set(tb); let inter = 0; sa.forEach(function (t) { if (sb.has(t)) inter++; });
+    return Math.min(Math.max(inter / (sa.size + sb.size - inter), ratio), 0.8);
+  }
+  function vendorScore(printed, v) {
+    let best = 0;
+    const listed = [v.name].concat(v.aliases || []).reduce(function (acc, n) { return acc.concat(variants(n).filter(function (x) { return x.cap === 1; }).map(function (x) { return x.text; })); }, []);
+    variants(printed).forEach(function (pv) {
+      listed.forEach(function (ln) { best = Math.max(best, Math.min(pairScore(pv.text, ln), pv.cap)); });
+    });
+    return best;
+  }
+  function matchVendor(printed, sender, vendors) {
+    const s = String(sender || '').toLowerCase(), domain = s.split('@')[1] || '';
+    const internal = s.endsWith(INTERNAL_DOMAIN);
+    const platform = PLATFORMS.some(function (p) { return domain === p || domain.endsWith('.' + p); });
+    const useEmail = !!s && !internal && !platform;
+    const rows = vendors.map(function (v) {
+      return { v: v, score: vendorScore(printed, v), email: useEmail && (v.emails || []).some(function (e) { return e.toLowerCase() === s; }) };
+    });
+    const byName = rows.slice().sort(function (a, b) { return b.score - a.score; });
+    const emailRows = rows.filter(function (r) { return r.email; });
+    const none = function (reason, sug) { return { vendor: null, confidence: 'none', reason: reason, suggestion: sug || null, score: byName[0] ? byName[0].score : 0 }; };
+    if (emailRows.length === 1) {
+      const er = emailRows[0];
+      if (er.score >= 0.6) return { vendor: er.v, confidence: 'high', reason: 'sender address is on file for this vendor and the printed name is consistent', suggestion: null, score: er.score };
+      if (byName[0].score >= 0.85) return none('sender address and printed name point to different vendors', byName[0].v);
+      return { vendor: er.v, confidence: 'medium', reason: 'sender address is on file for this vendor but the printed name differs', suggestion: null, score: er.score };
+    }
+    const best = byName[0], second = byName[1];
+    if (best.score >= 0.85) {
+      if (second && second.score >= best.score - 0.03) return none('two vendors fit equally well', best.v);
+      return best.score === 1
+        ? { vendor: best.v, confidence: 'high', reason: 'printed name matches the vendor list', suggestion: null, score: 1 }
+        : { vendor: best.v, confidence: 'medium', reason: 'printed name is a shortened or slightly different form of the listed name', suggestion: null, score: best.score };
+    }
+    return none('printed name is not on the vendor list', best.score >= 0.6 ? best.v : null);
+  }
+
+  // ---------------------------------------------------------------- mock ERP
+  class MockERP {
+    constructor(seed, wf) {
+      const s = JSON.parse(JSON.stringify(seed));
+      this.vendors = s.vendors; this.jobs = s.jobs; this.costCodes = s.costCodes; this.budgets = s.budgets;
+      this.pos = s.pos; this.apInvoices = s.apInvoices; this.poSeq = s.poSeq; this.voucherSeq = s.voucherSeq;
+      this.wf = wf;
+    }
+    findVendor(name, sender) { return matchVendor(name, sender, this.vendors); }
+    getVendor(id) { return this.vendors.find(function (v) { return v.id === id; }) || null; }
+    getJob(id) { return this.jobs.find(function (j) { return j.id === id; }) || null; }
+    getCostCode(code) { return this.costCodes.find(function (c) { return c.code === code; }) || null; }
+    getBudget(jobId, code) { return this.budgets[jobId + '|' + code] || null; }
+    createPO(draft) {
+      const number = 'PO-26-' + String(++this.poSeq).padStart(4, '0');
+      const po = Object.assign({ number: number, status: 'open', billed: 0, billedSub: 0, billedTax: 0, billedFreight: 0, freight: 0, purchaser: JOB_PM[draft.jobId] || 'Unassigned' }, JSON.parse(JSON.stringify(draft)));
+      this.pos.push(po);
+      const b = this.getBudget(po.jobId, po.coding.costCode);
+      if (b) b.committed = r2(b.committed + po.total);
+      return po;
+    }
+    getPO(number) {
+      const n = String(number || '').toUpperCase();
+      return this.pos.find(function (p) { return p.number === n; }) || null;
+    }
+    findOpenPOs(q) {
+      return this.pos.filter(function (p) {
+        return p.status === 'open' && p.vendorId === q.vendorId && (!q.jobId || p.jobId === q.jobId) && r2(p.total - p.billed) > 0;
+      });
+    }
+    invoiceExists(vendorId, invoiceNo) {
+      const n = normInvoiceNo(invoiceNo);
+      return this.apInvoices.find(function (i) { return i.vendorId === vendorId && i.invoiceNoNorm === n && i.status !== 'void'; }) || null;
+    }
+    // The bot enters a voucher, then reads it back. If the read-back does not match, the voucher is voided.
+    enterVoucher(inv, po, je, mode, glitch) {
+      const voucher = 'AP-26-' + String(++this.voucherSeq).padStart(4, '0');
+      const rec = { voucher: voucher, vendorId: po.vendorId, invoiceNo: inv.invoiceNo, invoiceNoNorm: normInvoiceNo(inv.invoiceNo), date: inv.date,
+        total: glitch ? r2(inv.total + 0.10) : inv.total, applied: { sub: inv.subtotal, tax: inv.tax, freight: inv.freight },
+        poNumber: po.number, je: je, status: 'entered', mode: mode, pdfAttached: true };
+      this.apInvoices.push(rec);
+      po.billedSub = r2(po.billedSub + inv.subtotal); po.billedTax = r2(po.billedTax + inv.tax); po.billedFreight = r2(po.billedFreight + inv.freight);
+      po.billed = r2(po.billedSub + po.billedTax + po.billedFreight);
+      if (r2(po.total - po.billed) <= 0.005) po.status = 'closed';
+      return rec;
+    }
+    readBack(voucher) { const r = this.apInvoices.find(function (i) { return i.voucher === voucher; }); return r ? { total: r.total, vendorId: r.vendorId, invoiceNo: r.invoiceNo, poNumber: r.poNumber } : null; }
+    voidVoucher(voucher) {
+      const r = this.apInvoices.find(function (i) { return i.voucher === voucher; });
+      if (!r || r.status === 'void') return;
+      const po = this.getPO(r.poNumber);
+      po.billedSub = r2(po.billedSub - r.applied.sub); po.billedTax = r2(po.billedTax - r.applied.tax); po.billedFreight = r2(po.billedFreight - r.applied.freight);
+      po.billed = r2(po.billedSub + po.billedTax + po.billedFreight);
+      if (po.status === 'closed' && r2(po.total - po.billed) > 0.005) po.status = 'open';
+      r.status = 'void';
+    }
+    approveVoucher(voucher) { const r = this.apInvoices.find(function (i) { return i.voucher === voucher; }); if (r) r.status = 'approved'; }
+  }
+
+  // ---------------------------------------------------------------- document parsing (built-in, rule-based)
+  const AMT = '\\$?\\s*([\\d,]+\\.\\d{2})';
+  function firstLine(lines) { return lines.length ? lines[0] : ''; }
+  function parseTableLines(rawLines) {
+    const out = [];
+    rawLines.forEach(function (l) {
+      const cols = l.split(/\s*\|\s*|\t+/);
+      if (cols.length < 5) return;
+      if (/^description$/i.test(cols[0].trim())) return;
+      const qty = pm(cols[1]), unitPrice = pm(cols[3]), amount = pm(cols[4]);
+      if (qty === null || unitPrice === null || amount === null) return;
+      out.push({ desc: cols[0].trim(), qty: qty, unit: cols[2].trim(), unitPrice: unitPrice, amount: amount });
+    });
+    return out;
+  }
+  function parseCommon(text) {
+    const raw = String(text || '').replace(/\r/g, '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    const out = { vendorName: firstLine(raw), date: null, jobId: null, project: '', lines: [], subtotal: null, tax: null, freight: null, total: null, taxPct: null };
+    const dm = []; const re = /(\bdue\s+|\bship\s+)?\bdate\s*[:\-]?\s*(\d{1,2}\/\d{1,2}\/\d{4})/gi; let m;
+    while ((m = re.exec(text))) { if (!m[1]) dm.push(m[2]); }
+    out.date = isoDate(dm[0]);
+    raw.forEach(function (l) {
+      let x;
+      if ((x = l.match(/^(?:project|job)\s*[:\-]?\s*(.+)$/i))) {
+        out.project = x[1].trim();
+        const j = x[1].match(/\b(\d{2}-\d{3})\b/); if (j) out.jobId = j[1];
+      }
+      if ((x = l.match(new RegExp('^subtotal\\s*[:\\-]?\\s*' + AMT, 'i')))) out.subtotal = pm(x[1]);
+      if ((x = l.match(new RegExp('^(?:sales\\s*)?tax(?:\\s*\\(([\\d.]+)%\\))?\\s*[:\\-]?\\s*' + AMT, 'i')))) { out.tax = pm(x[2]); if (x[1]) out.taxPct = parseFloat(x[1]); }
+      if ((x = l.match(new RegExp('^(?:freight|shipping|delivery|handling)(?:\\s*charges?)?\\s*[:\\-]?\\s*' + AMT, 'i')))) out.freight = pm(x[1]);
+      if ((x = l.match(new RegExp('^(?:total(?:\\s*due)?|amount\\s*due|grand\\s*total)\\s*[:\\-]?\\s*' + AMT, 'i')))) out.total = pm(x[1]);
+    });
+    out.lines = parseTableLines(raw);
+    return out;
+  }
+  function parseQuoteText(text) {
+    const c = parseCommon(text);
+    const q = text.match(/quote\s*(?:#|no\.?|number)\s*[:\-]?\s*([A-Z0-9\-]+)/i);
+    const v = text.match(/valid\s*(?:through|until|thru)\s*[:\-]?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+    c.docNo = q ? q[1] : '';
+    c.validThrough = v ? isoDate(v[1]) : null;
+    return c;
+  }
+  function parseInvoiceText(text) {
+    const c = parseCommon(text);
+    const n = text.match(/invoice\s*(?:#|no\.?|number)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-]*)/i);
+    c.invoiceNo = n ? n[1] : '';
+    let po = null;
+    const strict = text.match(/\b(PO-\d{2}-\d{4})\b/i);
+    if (strict) po = strict[1].toUpperCase();
+    else {
+      const loose = text.match(/\b(?:P\.?O\.?|purchase\s+order)\s*(?:#|no\.?|number)?\s*[:\-]\s*([A-Z0-9][A-Z0-9\-]{2,})/i);
+      if (loose) po = loose[1].toUpperCase();
+    }
+    c.poRef = po;
+    return c;
+  }
+  function normalizeInvoice(inv) {
+    inv.tax = inv.tax === null || inv.tax === undefined ? 0 : inv.tax;
+    inv.freight = inv.freight === null || inv.freight === undefined ? 0 : inv.freight;
+    if ((inv.subtotal === null || inv.subtotal === undefined) && inv.total !== null && inv.total !== undefined) inv.subtotal = r2(inv.total - inv.tax - inv.freight);
+    inv.lines = inv.lines || [];
+    return inv;
+  }
+  function classifyDocument(email) {
+    if (email.manual) return 'invoice';
+    const att = email.attachment;
+    const pages = att ? (att.pages || [att.text]) : [];
+    const head = pages.length ? String(pages[0]).split('\n').slice(0, 6).join('\n') : '';
+    if (/\b(past due|second notice|final notice|overdue|payment reminder|friendly reminder)\b/i.test((email.subject || '') + '\n' + head)) return 'reminder';
+    if (att && /\bstatement\b/i.test(head)) return 'statement';
+    if (att && looksLikeInvoice(pages.join('\n'))) return 'invoice';
+    return 'correspondence';
+  }
+  // Splits one PDF (an array of page texts) into invoices. A page with a new invoice number starts a new invoice;
+  // a page with the same number, or no number, continues the current one. Unmarked continuation pages are flagged.
+  function splitPages(pages) {
+    const segs = []; let cur = null;
+    pages.forEach(function (txt, i) {
+      const m = String(txt).match(/invoice\s*(?:#|no\.?|number)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-]*)/i);
+      const key = m ? normInvoiceNo(m[1]) : null;
+      const marked = /\bcontinued\b|\bpage\s+\d+\s+of\s+\d+\b/i.test(txt);
+      if (cur && (key === null || key === cur.key)) {
+        cur.end = i + 1; cur.pages.push(txt);
+        if (key === null && !marked) { cur.confident = false; cur.note = 'Page ' + (i + 1) + ' has no invoice number and no "continued" marker. It was attached to the previous invoice. Confirm the split.'; }
+      } else {
+        cur = { start: i + 1, end: i + 1, pages: [txt], key: key, confident: key !== null, note: key === null ? 'The first page has no invoice number.' : '' };
+        segs.push(cur);
+      }
+    });
+    return segs;
+  }
+  function checkSplit(segs, n) {
+    let next = 1;
+    for (let i = 0; i < segs.length; i++) { if (segs[i].start !== next || segs[i].end < segs[i].start) return false; next = segs[i].end + 1; }
+    return segs.length > 0 && next === n + 1;
+  }
+  function looksLikeInvoice(text) {
+    const head = String(text || '').split('\n').slice(0, 12).join('\n');
+    return /\binvoice\b/i.test(head) && /invoice\s*(?:#|no\.?|number)\s*[:\-]?\s*[A-Z0-9]/i.test(text) && /total/i.test(text);
+  }
+
+  // ---------------------------------------------------------------- requisition validation
+  function validateRequisition(form, quote, wf) {
+    const erp = wf.erp, errors = [], flags = [];
+    const need = function (f, label) { if (form[f] === undefined || form[f] === null || String(form[f]).trim() === '') errors.push({ field: f, msg: label + ' is required.' }); };
+    need('vendorName', 'Vendor'); need('dateNeeded', 'Date needed'); need('type', 'Purchase type');
+    need('subtype', 'What is being purchased');
+    /* What is being bought decides what else the form has to answer. A job
+       purchase needs a job and a cost code; an overhead or equipment purchase
+       needs a purchase type, because that is what sets the GL account. */
+    const cls = form.purchaseClass || 'job';
+    if (!PCLASS[cls]) errors.push({ field: 'purchaseClass', msg: 'Choose what kind of purchase this is.' });
+    const pt = form.ptype ? ptypeById(form.ptype) : null;
+    if (cls === 'job') {
+      need('jobId', 'Job number'); need('costCode', 'Cost code'); need('category', 'Cost category');
+    } else {
+      if (!form.ptype) errors.push({ field: 'ptype', msg: 'Choose what is being purchased, so it can be coded.' });
+      else if (!pt) errors.push({ field: 'ptype', msg: 'That purchase type is not on the list.' });
+      else if (pt.needsReason && !String(form.otherReason || '').trim()) errors.push({ field: 'otherReason', msg: 'Explain what this is, so it can be categorized and reviewed.' });
+      if (form.jobId && String(form.jobId).trim()) errors.push({ field: 'jobId', msg: 'A ' + PCLASS[cls].label.toLowerCase() + ' purchase does not belong to a job. Clear the job number, or change the purchase to job related.' });
+    }
+    const price = pm(form.price);
+    if (price === null || price <= 0) errors.push({ field: 'price', msg: 'Enter an estimated price before tax, greater than zero.' });
+    const job = form.jobId ? erp.getJob(form.jobId) : null;
+    if (form.jobId && !job) errors.push({ field: 'jobId', msg: 'Job ' + form.jobId + ' is not in the job master.' });
+    if (job && job.status !== 'open') errors.push({ field: 'jobId', msg: 'Job ' + job.id + ' (' + job.name + ') is closed. Costs cannot be committed to it.' });
+    const cc = form.costCode ? erp.getCostCode(form.costCode) : null;
+    if (form.costCode && !cc) errors.push({ field: 'costCode', msg: 'Cost code ' + form.costCode + ' is not in the cost code master.' });
+    if (form.category && !CATEGORIES[form.category]) errors.push({ field: 'category', msg: 'Choose a valid cost category.' });
+    if (form.dateNeeded && !isoDate(form.dateNeeded)) errors.push({ field: 'dateNeeded', msg: 'Enter the date needed as a valid date.' });
+    if (errors.length) return { errors: errors, flags: [], vendor: null, amounts: null };
+
+    const vm = erp.findVendor(form.vendorName);
+    const vendor = vm.vendor;
+    if (!vendor) {
+      flags.push({ code: 'NEW_VENDOR', msg: '"' + form.vendorName + '" is not in the vendor master' + (vm.suggestion ? ' (closest match: ' + vm.suggestion.name + ')' : '') + '.', fix: 'Set up the vendor (W-9, terms) before a PO can be issued.' });
+    } else {
+      if (vm.confidence === 'medium') flags.push({ code: 'VENDOR_UNSURE', msg: '"' + form.vendorName + '" only partly matches ' + vendor.name + '.', fix: 'Confirm it is the same company.' });
+      if (vendor.types.indexOf(form.type) < 0) flags.push({ code: 'VENDOR_TYPE', msg: vendor.name + ' is not set up to supply ' + form.type + '.', fix: 'Confirm the vendor and purchase type.' });
+    }
+    if (isoDate(form.dateNeeded) < wf.today) flags.push({ code: 'DATE_PAST', msg: 'Date needed (' + form.dateNeeded + ') is already past.', fix: 'Confirm the purchase was not already made without a PO.' });
+    if (cc && cc.categories.indexOf(form.category) < 0) {
+      flags.push({ code: 'CATEGORY_MISMATCH', msg: 'Cost code ' + cc.code + ' (' + cc.desc + ') does not allow category ' + CATEGORIES[form.category] + '.', fix: 'Allowed: ' + cc.categories.map(function (k) { return CATEGORIES[k]; }).join(', ') + '.' });
+    }
+    if (cls === 'job' && TYPE_TO_CAT[form.type] && TYPE_TO_CAT[form.type] !== form.category) {
+      flags.push({ code: 'TYPE_MISMATCH', msg: 'Purchase type "' + form.type + '" does not match category ' + CATEGORIES[form.category] + '.', fix: 'Confirm which one is right; coding follows the category.' });
+    }
+    if (pt && pt.cls !== cls) {
+      flags.push({ code: 'CLASS_TYPE', msg: '"' + pt.label + '" is a ' + PCLASS[pt.cls].label.toLowerCase() + ' purchase, but this is marked ' + PCLASS[cls].label.toLowerCase() + '.', fix: 'Confirm which it is. The class decides whether it hits a job or the GL.' });
+    }
+
+    let subtotal = price, quoteTax = null;
+    if (quote) {
+      if (quote.lines && quote.lines.length) subtotal = sum(quote.lines.map(function (l) { return l.amount; }));
+      quoteTax = quote.tax;
+      const qs = quote.subtotal !== null && quote.subtotal !== undefined ? quote.subtotal : subtotal;
+      if (!quote.lines.length || quote.total === null) flags.push({ code: 'QUOTE_UNREADABLE', msg: 'Could not read line items or a total from the quote.', fix: 'Reviewer to read the quote manually.' });
+      const qv = erp.findVendor(quote.vendorName).vendor;
+      if (vendor ? !qv || qv.id !== vendor.id : similarity(quote.vendorName, form.vendorName) < 0.85) flags.push({ code: 'QUOTE_VENDOR', msg: 'Quote is from "' + quote.vendorName + '" but the form says "' + form.vendorName + '".', fix: 'Confirm the right vendor.' });
+      if (Math.abs(qs - price) > price * CFG.quoteTolerance) flags.push({ code: 'QUOTE_PRICE', msg: 'Quote subtotal ' + usd(qs) + ' does not match the form price ' + usd(price) + '.', fix: 'PO will be written from the quote. Confirm the scope with the PM.' });
+      const lineBad = quote.lines.some(function (l) { return Math.abs(r2(l.qty * l.unitPrice) - l.amount) > 0.011; });
+      const subBad = quote.subtotal !== null && quote.lines.length && Math.abs(sum(quote.lines.map(function (l) { return l.amount; })) - quote.subtotal) > 0.011;
+      const totBad = quote.total !== null && quote.subtotal !== null && quote.tax !== null && Math.abs(r2(quote.subtotal + quote.tax) - quote.total) > 0.011;
+      if (lineBad || subBad || totBad) flags.push({ code: 'QUOTE_MATH', msg: 'The quote does not add up (' + [lineBad ? 'line extensions' : '', subBad ? 'subtotal' : '', totBad ? 'total' : ''].filter(Boolean).join(', ') + ').', fix: 'Ask the vendor for a corrected quote.' });
+      const exp = cls === 'job' ? expectedTax(job, form.category, subtotal) : r2(subtotal * CFG.taxRate);
+      if (quote.tax !== null && Math.abs(quote.tax - exp) > CFG.taxTolerance) {
+        flags.push({ code: 'QUOTE_TAX', msg: 'Quote charges ' + usd(quote.tax) + ' tax; ' + (job && job.taxExempt ? 'job ' + job.id + ' is tax-exempt' : 'the rule expects ' + usd(exp)) + '.', fix: 'The PO is written with ' + usd(exp) + ' tax. Ask the vendor to correct the quote.' });
+      }
+      if (quote.validThrough && quote.validThrough < wf.today) flags.push({ code: 'QUOTE_EXPIRED', msg: 'Quote expired on ' + quote.validThrough + '.', fix: 'Ask the vendor to reissue.' });
+      if (quote.jobId && job && quote.jobId !== job.id) flags.push({ code: 'QUOTE_JOB', msg: 'Quote references job ' + quote.jobId + ' but the form says ' + job.id + '.', fix: 'Confirm the job.' });
+    } else if (price >= 2500) {
+      flags.push({ code: 'NO_QUOTE', msg: 'No quote attached for a purchase of ' + usd(price) + '.', fix: 'Attach the vendor quote.' });
+    }
+
+    const tax = cls === 'job' ? expectedTax(job, form.category, subtotal) : r2(subtotal * CFG.taxRate);
+    const amounts = { subtotal: r2(subtotal), tax: tax, total: r2(subtotal + tax) };
+
+    /* Treatment. Both of these are decided here, before the PO exists, rather
+       than argued about at close. */
+    let treatment = { kind: 'expense', acct: pt ? pt.gl : (form.category ? GL[form.category].acct : '5900'), name: pt ? pt.name : (form.category ? GL[form.category].name : 'Other job costs') };
+    const months = Number(form.coversMonths) || 0;
+    if (pt && pt.capital && amounts.subtotal >= CAP_THRESHOLD) {
+      treatment = { kind: 'capital', acct: CAPITAL_ACCT.acct, name: CAPITAL_ACCT.name, life: pt.life };
+      flags.push({ code: 'CAPITALIZE', msg: usd(amounts.subtotal) + ' is at or above the ' + usd(CAP_THRESHOLD) + ' capitalization threshold for ' + pt.label.toLowerCase() + '.', fix: 'Code to ' + CAPITAL_ACCT.acct + ' ' + CAPITAL_ACCT.name + ' and depreciate over ' + (pt.life || 'its useful life') + ', rather than expensing it this period.' });
+    }
+    if (months > 1) {
+      treatment = { kind: 'prepaid', acct: PREPAID.acct, name: PREPAID.name, months: months, to: treatment.acct, toName: treatment.name };
+      flags.push({ code: 'PREPAID', msg: 'This covers ' + months + ' months, so expensing it in one period overstates this month and understates the rest.', fix: 'Record to ' + PREPAID.acct + ' ' + PREPAID.name + ' and amortize ' + usd(r2(amounts.subtotal / months)) + ' a month to ' + treatment.to + ' ' + treatment.toName + '.' });
+    } else if (pt && pt.periodic && !months) {
+      flags.push({ code: 'PERIOD_UNKNOWN', msg: pt.label + ' usually covers a period, but no period was given.', fix: 'Enter the number of months it covers, so it is expensed or carried as prepaid correctly.' });
+    }
+    /* Anything that is not a job cost is categorized by a person before it goes
+       anywhere. The system proposes the coding; it does not decide it. */
+    if (cls !== 'job') {
+      flags.push({ code: 'CATEGORIZE', msg: 'Categorization review: coded as ' + treatment.acct + ' ' + treatment.name + (pt ? ' (' + pt.label + ')' : '') + (form.otherReason ? '. Stated reason: ' + form.otherReason : '') + '.', fix: 'A person confirms the category before the PO is issued. Overhead coding is not auto-approved.' });
+    }
+
+    const b = cls === 'job' && job && cc ? erp.getBudget(job.id, cc.code) : null;
+    if (cls === 'job') {
+      if (b && amounts.total > r2(b.budget - b.committed)) {
+        flags.push({ code: 'OVER_BUDGET', msg: 'Adds ' + usd(amounts.total) + ' to ' + job.id + ' / ' + cc.code + ', which has only ' + usd(r2(b.budget - b.committed)) + ' budget left.', fix: 'PM to confirm a budget transfer or change order.' });
+      } else if (!b) {
+        flags.push({ code: 'NO_BUDGET', msg: 'No budget line exists for ' + job.id + ' / ' + cc.code + '.', fix: 'Add the budget line or correct the cost code.' });
+      }
+    }
+
+    if (vendor) {
+      const dupe = wf.reqs.concat(erp.pos.map(function (p) { return { id: p.number, vendorId: p.vendorId, form: { jobId: p.jobId }, amounts: { total: p.total }, status: 'po', submittedAt: null, created: p.createdDate }; }))
+        .find(function (r) {
+          if (r.status === 'returned' || r.status === 'rejected') return false;
+          if (r.vendorId !== vendor.id || r.form.jobId !== (job ? job.id : undefined)) return false;
+          if (Math.abs(r.amounts.total - amounts.total) > amounts.total * 0.01) return false;
+          const when = r.created || (r.submittedAt ? new Date(r.submittedAt).toISOString().slice(0, 10) : wf.today);
+          return Math.abs(dayDiff(wf.today, when)) <= CFG.dupWindowDays;
+        });
+      if (dupe) flags.push({ code: 'DUPLICATE', msg: 'Looks like ' + dupe.id + ' (same vendor, job and amount within ' + CFG.dupWindowDays + ' days).', fix: 'Confirm this is not a double order.' });
+    }
+    if (amounts.total > CFG.autoApproveMax) flags.push({ code: 'OVER_LIMIT', msg: 'Total ' + usd(amounts.total) + ' is over the ' + usd(CFG.autoApproveMax) + ' auto-approval limit.', fix: 'Reviewer approval required.' });
+
+    return { errors: errors, flags: flags, vendor: vendor, job: job, cc: cc, amounts: amounts, quoteTax: quoteTax, pclass: cls, ptype: pt, treatment: treatment };
+  }
+
+  // ---------------------------------------------------------------- workflow (requisitions + invoices)
+  class Workflow {
+    constructor(opts) {
+      opts = opts || {};
+      this.today = opts.today || todayISO();
+      this.erp = new MockERP(seedData(), this);
+      this.reqs = []; this.reqSeq = 1000;
+      this.mails = []; this.mailSeq = 0;
+      this.invoices = []; this.invSeq = 0;
+      this.statements = []; this.followUps = []; this.library = [];
+      this.issueLog = []; this.issSeq = 0; this.glitch = false;
+      this.audit = [];
+    }
+    log(actor, action, ref, detail) {
+      this.audit.unshift({ ts: Date.now(), actor: actor, action: action, ref: ref || '', detail: detail || '' });
+    }
+
+    // ---- requisitions
+    submitRequisition(form, quote) {
+      const v = validateRequisition(form, quote || null, this);
+      if (v.errors.length) return { ok: false, errors: v.errors };
+      const req = {
+        id: 'REQ-' + (++this.reqSeq), form: Object.assign({}, form, { price: pm(form.price) }), quote: quote || null,
+        flags: v.flags, vendorId: v.vendor ? v.vendor.id : null, vendorName: v.vendor ? v.vendor.name : form.vendorName,
+        jobName: v.job ? v.job.name : PCLASS[v.pclass].label, pclass: v.pclass, ptype: v.ptype, treatment: v.treatment,
+        amounts: v.amounts, status: 'needs_review', poNumber: null, note: '', submittedAt: Date.now()
+      };
+      this.reqs.unshift(req);
+      this.log('Requester', 'Submitted requisition', req.id, req.vendorName + ' / ' + (form.jobId || PCLASS[v.pclass].label) + ' / ' + usd(req.amounts.total));
+      if (req.flags.length === 0) {
+        this.log('Rules engine', 'All checks passed, under auto-approval limit', req.id);
+        this.botCreatePO(req);
+      } else {
+        this.log('Rules engine', 'Routed to reviewer (' + req.flags.map(function (f) { return f.code; }).join(', ') + ')', req.id);
+      }
+      return { ok: true, req: req };
+    }
+    buildPODraft(req) {
+      const f = req.form, q = req.quote;
+      const lines = q && q.lines && q.lines.length ? q.lines.map(function (l) { return Object.assign({}, l); })
+        : [{ desc: f.subtype, qty: 1, unit: 'LS', unitPrice: req.amounts.subtotal, amount: req.amounts.subtotal }];
+      const vendor = this.erp.getVendor(req.vendorId);
+      return {
+        vendorId: req.vendorId, jobId: f.jobId, createdDate: this.today, dateNeeded: f.dateNeeded, reqId: req.id,
+        lines: lines, subtotal: req.amounts.subtotal, tax: req.amounts.tax, total: req.amounts.total,
+        terms: vendor ? vendor.terms : '', quoteRef: q ? q.docNo : '',
+        coding: (req.pclass && req.pclass !== 'job')
+          ? { costCode: null, category: null, gl: req.treatment.acct, glName: req.treatment.name, pclass: req.pclass, ptype: req.ptype ? req.ptype.id : null, treatment: req.treatment.kind }
+          : { costCode: f.costCode, category: f.category, gl: GL[f.category].acct }
+      };
+    }
+    botCreatePO(req, actor) {
+      if (!req.vendorId) throw new Error('Vendor must exist in the vendor master before a PO is created.');
+      const po = this.erp.createPO(this.buildPODraft(req));
+      req.status = 'po_created'; req.poNumber = po.number;
+      this.log(actor || 'ERP bot', 'Created PO in ERP (ERP assigned the number)', req.id, po.number + ' / GL ' + po.coding.gl + ' / ' + usd(po.total));
+      return po;
+    }
+    approveRequisition(id, note, overrideVendorId) {
+      const req = this.reqs.find(function (r) { return r.id === id; });
+      if (!req) return null;
+      if (overrideVendorId) { req.vendorId = overrideVendorId; req.vendorName = this.erp.getVendor(overrideVendorId).name; }
+      if (!req.vendorId) return { error: 'Set up the vendor first.' };
+      req.note = note || '';
+      this.log('Reviewer', 'Approved requisition', req.id, note || 'No note');
+      return { po: this.botCreatePO(req) };
+    }
+    returnRequisition(id, note) {
+      const req = this.reqs.find(function (r) { return r.id === id; });
+      req.status = 'returned'; req.note = note || '';
+      this.log('Reviewer', 'Returned to requester', id, note || '');
+    }
+    rejectRequisition(id, note) {
+      const req = this.reqs.find(function (r) { return r.id === id; });
+      req.status = 'rejected'; req.note = note || '';
+      this.log('Reviewer', 'Rejected requisition', id, note || '');
+    }
+
+    // ---- Phase 1: AP inbox -> invoices
+    getInv(id) { return this.invoices.find(function (r) { return r.id === id; }); }
+    invoicesFor(mail) { const self = this; return mail.invoiceIds.map(function (id) { return self.getInv(id); }); }
+    ownerFor(res, code) {
+      const kind = ISSUES[code] ? ISSUES[code].owner : 'ap';
+      if (kind === 'setup') return 'Vendor setup (Purchasing)';
+      if (kind === 'ap') return 'AP clerk';
+      if (res.po && res.po.purchaser) return res.po.purchaser;
+      const job = res.invoice && res.invoice.jobId ? this.erp.getJob(res.invoice.jobId) : null;
+      return job && job.pm ? job.pm : 'Choose a project manager';
+    }
+    processEmail(email) {
+      const mail = { id: 'M-' + pad(++this.mailSeq), email: email, docType: null, vendor: null, vendorMatch: null, folder: null, steps: [], invoiceIds: [], note: '' };
+      this.mails.unshift(mail);
+      const att = email.attachment, pages = att ? (att.pages || [att.text]) : [];
+      mail.pageCount = pages.length;
+      mail.docType = classifyDocument(email);
+      const names = { invoice: 'Invoice', statement: 'Vendor statement', reminder: 'Payment reminder', correspondence: 'General correspondence' };
+      mail.steps.push({ name: 'Classify', ok: true, detail: names[mail.docType] });
+      this.log('Inbox bot', 'Classified email as ' + names[mail.docType].toLowerCase(), mail.id, email.subject);
+      if (mail.docType === 'invoice') return this.intakeInvoices(mail, pages);
+      const printed = att ? String(pages[0]).split('\n')[0].trim() : (email.fromName || '');
+      const vm = this.erp.findVendor(printed, email.from);
+      mail.vendorMatch = vm; mail.vendor = vm.confidence === 'high' ? vm.vendor : null;
+      const sub = mail.docType === 'statement' ? 'Statements' : 'Correspondence';
+      mail.folder = mail.vendor ? mail.vendor.folder + '/' + sub : 'AP/General inbox (needs review)';
+      mail.steps.push({ name: 'File', ok: !!mail.vendor, detail: mail.vendor ? 'Matched ' + mail.vendor.name + '. Filed to ' + mail.folder : 'No confident vendor match. Left in ' + mail.folder });
+      const text = pages.join('\n');
+      if (att) {
+        const lib = 'AP Library/' + sub + '/' + (mail.vendor ? mail.vendor.name : 'Unmatched') + '/' + att.name;
+        this.library.push({ path: lib, kind: names[mail.docType], mailId: mail.id });
+        mail.libraryPath = lib;
+      }
+      if (mail.docType === 'statement') {
+        const per = text.match(/period\s*[:\-]?\s*(.+)/i);
+        this.statements.unshift({ id: 'ST-' + pad(this.statements.length + 1), mailId: mail.id, vendor: mail.vendor ? mail.vendor.name : printed, period: per ? per[1].trim() : '', file: mail.libraryPath, receivedAt: Date.now() });
+        mail.steps.push({ name: 'Queue', ok: true, detail: 'Saved for Phase 3 statement reconciliation. Nothing is entered.' });
+      }
+      if (mail.docType === 'reminder') {
+        const no = parseInvoiceText(text).invoiceNo;
+        const found = mail.vendor && no ? this.erp.invoiceExists(mail.vendor.id, no) : null;
+        this.followUps.unshift({ id: 'FU-' + pad(this.followUps.length + 1), mailId: mail.id, vendor: mail.vendor ? mail.vendor.name : printed, invoiceNo: no || '(none found)', found: !!found, voucher: found ? found.voucher : null,
+          note: found ? 'Invoice ' + no + ' is already entered as ' + found.voucher + '. No action needed.' : 'Invoice ' + (no || '?') + ' is not in the ERP. The original may be missing from the inbox.', needsAction: !found });
+        mail.steps.push({ name: 'Check', ok: !!found, detail: this.followUps[0].note });
+      }
+      if (mail.docType === 'correspondence') mail.steps.push({ name: 'Route', ok: true, detail: 'Filed with the vendor. No invoice found, so nothing is extracted.' });
+      return mail;
+    }
+    intakeInvoices(mail, pages) {
+      const email = mail.email;
+      const segs = email.manual ? [{ start: 1, end: 1, pages: ['(Manual entry, no PDF)'], key: null, confident: true, note: '' }] : splitPages(pages);
+      const range = function (g) { return g.start === g.end ? 'p' + g.start : 'p' + g.start + '-' + g.end; };
+      mail.steps.push({ name: 'Split', ok: email.manual ? true : (checkSplit(segs, pages.length) && segs.every(function (g) { return g.confident; })),
+        detail: email.manual ? 'Manual entry' : (segs.length === 1 ? 'One invoice (' + range(segs[0]) + ')' : segs.length + ' invoices found in ' + pages.length + ' pages: ' + segs.map(range).join(', ')) + (segs.every(function (g) { return g.confident; }) ? '' : '. Needs confirming.') });
+      const self = this;
+      segs.forEach(function (seg) {
+        const inv = email.manual ? normalizeInvoice(Object.assign({ lines: [] }, email.manual)) : normalizeInvoice(segs.length === 1 && email.parsed ? email.parsed : parseInvoiceText(seg.pages.join('\n')));
+        const vm = self.erp.findVendor(inv.vendorName, email.from);
+        const res = { id: 'IN-' + pad(++self.invSeq), mailId: mail.id, email: email, seg: seg, pageText: seg.pages.join('\n'), multi: segs.length > 1, invoice: inv,
+          status: 'reportable', vendor: vm.confidence === 'high' ? vm.vendor : null, vendorMatch: vm, renamed: null, libraryPath: null, po: null, matchMethod: null, suggestions: [], checks: [], reasons: [], manualReasons: [],
+          comparison: [], steps: [], je: null, voucher: null, entryMode: email.manual ? 'manual' : 'bot', source: email.manual ? 'manual' : 'email', assignment: null, responses: [], override: null, assignedPO: null, hold: null, suggestedOwner: null, createdAt: Date.now() };
+        res.steps.push({ name: 'Extract', ok: true, detail: 'Invoice ' + (inv.invoiceNo || '?') + ', ' + usd(inv.total) + ', PO ref ' + (inv.poRef || 'none') });
+        self.invoices.unshift(res); mail.invoiceIds.push(res.id);
+        self.evaluateInvoice(res);
+      });
+      const first = this.getInv(mail.invoiceIds[0]);
+      mail.vendor = first.vendor; mail.vendorMatch = first.vendorMatch;
+      mail.folder = first.vendor ? first.vendor.folder + '/Invoices' : 'AP/General inbox (needs review)';
+      mail.steps.push({ name: 'File', ok: !!first.vendor, detail: first.vendor ? 'Matched ' + first.vendor.name + ' (' + first.vendorMatch.reason + '). Filed to ' + mail.folder : 'No confident vendor match. Left in ' + mail.folder });
+      return mail;
+    }
+
+    // Every check uses its issue code as its id, so a failed check IS the reportable issue category.
+    runChecks(res) {
+      const inv = res.invoice, vendor = res.vendor, erp = this.erp, vmx = res.vendorMatch, today = this.today, self = this;
+      const out = { checks: [], reasons: [], po: null, method: null, suggestions: [], comparison: [] };
+      const ov = (res.override && res.override.codes) || [];
+      const add = function (code, label, ok, detail, extra) {
+        if (!ok && ov.indexOf(code) >= 0) { out.checks.push({ id: code, label: label, ok: true, accepted: true, detail: 'Accepted by ' + res.override.by + ' (' + res.override.reason + '). Original finding: ' + detail }); return; }
+        out.checks.push({ id: code, label: label, ok: ok, detail: detail });
+        if (!ok) out.reasons.push(Object.assign({ id: code, label: ISSUES[code].label, detail: detail }, extra || {}));
+      };
+      const missing = [];
+      if (!inv.invoiceNo) missing.push('invoice number'); if (!inv.date) missing.push('date'); if (inv.total === null || inv.total === undefined) missing.push('total'); if (!inv.vendorName) missing.push('vendor name');
+      add('EXTRACT', 'Key fields were read', !missing.length, missing.length ? 'Missing: ' + missing.join(', ') : 'Vendor, invoice number, date and total found');
+      add('SPLIT', 'Page range is confident', res.seg.confident, res.seg.confident ? 'Pages ' + res.seg.start + ' to ' + res.seg.end : res.seg.note);
+      add('VENDOR_UNKNOWN', 'Vendor is on the vendor list', !!vendor,
+        vendor ? vendor.name + ' (' + vmx.reason + ')' : (vmx.vendor ? 'Probably ' + vmx.vendor.name + ', but the ' + vmx.reason + '. Confirm before posting.' :
+          '"' + inv.vendorName + '" is not on the vendor list' + (vmx.suggestion ? ' (closest: ' + vmx.suggestion.name + ')' : '') + '. ' + vmx.reason + '.'));
+      const assigned = res.assignedPO;
+      let po = null, method = null;
+      if (assigned) { po = erp.getPO(assigned); method = res.confirmedBy ? 'confirmed by ' + res.confirmedBy : (res.poEnteredBy ? 'PO number keyed by ' + res.poEnteredBy + ' (missing from the invoice)' : 'confirmed by the project manager'); }
+      else if (inv.poRef) { po = erp.getPO(inv.poRef); method = po ? 'PO number on the invoice' : null; }
+      if (!po && vendor) {
+        out.suggestions = erp.findOpenPOs({ vendorId: vendor.id, jobId: inv.jobId }).sort(function (x, y) {
+          return Math.abs(poRemaining(x).total - inv.total) - Math.abs(poRemaining(y).total - inv.total); });
+      }
+      out.po = po; out.method = method;
+      if (!po) {
+        const sug = out.suggestions[0];
+        add('NO_PO', 'Invoice matches a purchase order', false, inv.poRef ? 'PO "' + inv.poRef + '" does not exist in the ERP.' : 'No PO number on the invoice.' +
+          (sug ? ' Possible match: ' + sug.number + ' (' + usd(poRemaining(sug).total) + ' left). Only the project manager can confirm it.' : ''));
+      } else {
+        add('NO_PO', 'Invoice matches a purchase order', true, po.number + ' via ' + method);
+        add('VENDOR_MISMATCH', 'Vendor ID matches the PO', !!vendor && vendor.id === po.vendorId,
+          vendor ? (vendor.id === po.vendorId ? 'Vendor ID ' + vendor.id + ' on both' : 'Invoice vendor is ' + vendor.id + ' (' + vendor.name + '); ' + po.number + ' was issued to ' + po.vendorId + ' (' + (erp.getVendor(po.vendorId) || {}).name + ')') : 'Invoice vendor could not be identified');
+        add('PO_CLOSED', 'PO is open', po.status === 'open', po.status === 'open' ? 'Open' : po.number + ' is ' + po.status);
+        if (inv.jobId) add('JOB_MISMATCH', 'Job on the invoice matches the PO', inv.jobId === po.jobId, inv.jobId === po.jobId ? 'Job ' + po.jobId : 'Invoice says ' + inv.jobId + '; the PO is for ' + po.jobId);
+      }
+      const dupe = vendor ? erp.invoiceExists(vendor.id, inv.invoiceNo) : null;
+      const inflight = vendor && inv.invoiceNo ? this.invoices.find(function (x) {
+        return x !== res && x.id < res.id && x.vendor && x.vendor.id === vendor.id && x.invoice.invoiceNo && normInvoiceNo(x.invoice.invoiceNo) === normInvoiceNo(inv.invoiceNo) && ['closed', 'rejected'].indexOf(x.status) < 0; }) : null;
+      add('DUPLICATE', 'Invoice number not already entered', !dupe && !inflight, dupe ? 'Already entered as ' + dupe.voucher + ' (' + dupe.invoiceNo + ', ' + usd(dupe.total) + ')' : (inflight ? 'Already received as ' + inflight.id + ' (' + inflight.invoice.invoiceNo + ')' : 'New for this vendor'));
+      const lineSum = inv.lines.length ? sum(inv.lines.map(function (l) { return l.amount; })) : null;
+      const lineExt = inv.lines.every(function (l) { return Math.abs(r2(l.qty * l.unitPrice) - l.amount) <= 0.011; });
+      const calc = inv.subtotal === null || inv.subtotal === undefined ? null : r2(inv.subtotal + inv.tax + inv.freight);
+      const mathOk = inv.total !== null && inv.total !== undefined && calc !== null && lineExt && (lineSum === null || Math.abs(lineSum - inv.subtotal) <= 0.011) && Math.abs(calc - inv.total) <= 0.011;
+      add('MATH', 'Invoice adds up (lines, subtotal, tax, freight, total)', mathOk, mathOk ? 'Balanced at ' + usd(inv.total) :
+        'Subtotal ' + usd(inv.subtotal) + ' + tax ' + usd(inv.tax) + ' + freight ' + usd(inv.freight) + ' = ' + usd(calc) + ', but the total says ' + usd(inv.total));
+      if (po) {
+        const job = erp.getJob(po.jobId), rem = poRemaining(po), tol = CFG.invoiceTolerance;
+        const exp = expectedTax(job, po.coding.category, inv.subtotal), rateOk = Math.abs(inv.tax - exp) <= CFG.taxTolerance;
+        add('TAX_RATE', 'Sales tax rate follows the job rule', rateOk, rateOk ? (exp === 0 ? 'No tax (exempt or non-taxable)' : usd(inv.tax) + ' at ' + (CFG.taxRate * 100).toFixed(1) + '%') :
+          'Invoice charges ' + usd(inv.tax) + '; ' + (job && job.taxExempt ? 'job ' + job.id + ' is tax-exempt' : 'the rule expects ' + usd(exp)));
+        const subOk = inv.subtotal <= rem.sub + tol;
+        add('PO_SHORT', 'Enough subtotal left on the PO', subOk, subOk ? usd(inv.subtotal) + ' against ' + usd(rem.sub) + ' left' : 'Invoice subtotal ' + usd(inv.subtotal) + ' is more than the ' + usd(rem.sub) + ' left on ' + po.number + ' — short by ' + usd(r2(inv.subtotal - rem.sub)), { shortBy: r2(inv.subtotal - rem.sub) });
+        if (rateOk && subOk) add('TAX_SHORT', 'Enough sales tax left on the PO', inv.tax <= rem.tax + CFG.taxTolerance, inv.tax <= rem.tax + CFG.taxTolerance ? usd(inv.tax) + ' against ' + usd(rem.tax) + ' left' : 'Invoice tax ' + usd(inv.tax) + ' is more than the ' + usd(rem.tax) + ' left on the PO');
+        add('FREIGHT', 'Freight is covered by the PO', inv.freight <= rem.freight + tol, inv.freight <= rem.freight + tol ? (inv.freight ? usd(inv.freight) + ' against ' + usd(rem.freight) + ' left' : 'No freight billed') : 'Invoice freight ' + usd(inv.freight) + ' is more than the ' + usd(rem.freight) + ' left on the PO');
+        const unmatched = inv.lines.filter(function (l) { return !po.lines.some(function (q) { return descOverlap(l.desc, q.desc) >= 0.5; }); });
+        add('ITEM_MISMATCH', 'Billed items appear on the PO', unmatched.length === 0, unmatched.length ? 'Not on the PO: ' + unmatched.map(function (l) { return l.desc; }).join('; ') : 'All lines found on the PO');
+        const dateOk = !inv.date || (inv.date <= today && inv.date >= po.createdDate);
+        add('DATE', 'Invoice date is sensible', dateOk, !inv.date ? 'No date found' : (inv.date > today ? 'Invoice is dated in the future' : (inv.date < po.createdDate ? 'Invoice predates the PO (' + po.createdDate + ')' : inv.date)));
+
+        const row = function (field, poVal, invVal, status) { out.comparison.push({ field: field, po: poVal, inv: invVal, status: status }); };
+        const st = function (code) { const c = out.checks.find(function (x) { return x.id === code; }); return c ? (c.ok ? 'match' : 'mismatch') : 'info'; };
+        const pending = this.invoices.filter(function (x) { return x !== res && x.po && x.po.number === po.number && x.status === 'awaiting_review'; });
+        row('PO number', po.number, inv.poRef || '(not printed)', assigned ? 'info' : (inv.poRef === po.number ? 'match' : 'info'));
+        row('Vendor ID', po.vendorId, vendor ? vendor.id : '(no confident match)', st('VENDOR_MISMATCH'));
+        row('Vendor name', (erp.getVendor(po.vendorId) || {}).name, inv.vendorName, 'info');
+        row('Job number', po.jobId, inv.jobId || '(not printed)', inv.jobId ? st('JOB_MISMATCH') : 'info');
+        row('Job name', job ? job.name : '', inv.project || '(not printed)', 'info');
+        row('PO total · billed · left', usd(po.total) + ' · ' + usd(po.billed) + ' · ' + usd(rem.total), usd(inv.total) + ' (this invoice)', inv.total <= rem.total + tol ? 'match' : 'mismatch');
+        row('Subtotal (left on PO)', usd(rem.sub) + ' of ' + usd(po.subtotal), usd(inv.subtotal), st('PO_SHORT'));
+        row('Sales tax (left on PO)', usd(rem.tax) + ' of ' + usd(po.tax), usd(inv.tax), st('TAX_RATE') === 'mismatch' ? 'mismatch' : st('TAX_SHORT'));
+        row('Freight (left on PO)', usd(rem.freight) + ' of ' + usd(po.freight || 0), usd(inv.freight), st('FREIGHT'));
+        if (pending.length) row('Other invoices waiting on this PO', pending.map(function (x) { return x.id + ' ' + usd(x.invoice.total); }).join(', '), 'Re-checked again when the bot enters', 'info');
+      }
+      return out;
+    }
+    evaluateInvoice(res, assignedPO) {
+      if (assignedPO) res.assignedPO = assignedPO;
+      const r = this.runChecks(res), inv = res.invoice, vendor = res.vendor;
+      res.checks = r.checks; res.po = r.po; res.matchMethod = r.method; res.suggestions = r.suggestions; res.comparison = r.comparison;
+      res.reasons = r.reasons.concat(res.manualReasons);
+      res.renamed = [vendor ? vendor.id : 'UNKNOWN', normInvoiceNo(inv.invoiceNo) || 'NOINV', inv.date || 'NODATE', r.po ? r.po.number : 'NOPO'].join('_') + (res.multi ? '_p' + res.seg.start + (res.seg.end > res.seg.start ? '-' + res.seg.end : '') : '') + '.pdf';
+      const day = inv.date || this.today;
+      res.libraryPath = 'AP Library/Invoices/' + day.slice(0, 4) + '/' + day.slice(5, 7) + '/' + res.renamed;
+      this.library = this.library.filter(function (l) { return l.invoiceId !== res.id; });
+      this.library.push({ path: res.libraryPath, kind: 'Invoice', invoiceId: res.id, mailId: res.mailId });
+      res.steps = res.steps.filter(function (x) { return x.name === 'Extract'; });
+      res.steps.push({ name: 'Rename', ok: true, detail: (res.email.attachment ? res.email.attachment.name : 'manual entry') + '  →  ' + res.renamed });
+      res.steps.push({ name: 'Match', ok: !!r.po, detail: r.po ? r.po.number + ' (' + r.method + ')' : 'No PO matched' });
+      const failed = res.reasons.length;
+      res.steps.push({ name: 'Checks', ok: failed === 0, detail: (res.checks.length - r.reasons.length) + ' of ' + res.checks.length + ' passed' });
+      res.assignment = null;
+      if (failed === 0) {
+        res.status = 'awaiting_review'; res.suggestedOwner = null;
+        res.steps.push({ name: 'Review', ok: true, detail: 'Ready for the reviewer to verify the invoice PDF and the PO. Not entered yet.' });
+      } else {
+        res.status = 'reportable'; res.suggestedOwner = this.ownerFor(res, res.reasons[0].id);
+        res.steps.push({ name: 'Report', ok: false, detail: failed + ' issue' + (failed > 1 ? 's' : '') + ' to report. Suggested owner: ' + res.suggestedOwner + '. Nothing is entered.' });
+      }
+      this.syncIssues(res);
+      this.log('Rules engine', failed ? 'Reportable: ' + res.reasons.map(function (x) { return x.id; }).join(', ') : 'All checks passed, ready for review', res.id, inv.invoiceNo + ' / ' + usd(inv.total));
+      return res;
+    }
+    syncIssues(res) {
+      const now = Date.now(), codes = res.reasons.map(function (x) { return x.id; }), self = this;
+      res.reasons.forEach(function (rs) {
+        if (!self.issueLog.find(function (i) { return i.invoiceId === res.id && i.code === rs.id && i.status === 'open'; })) {
+          self.issueLog.push({ id: 'ISS-' + pad(++self.issSeq), invoiceId: res.id, code: rs.id, label: ISSUES[rs.id].label, owner: self.ownerFor(res, rs.id), vendor: res.vendor ? res.vendor.name : res.invoice.vendorName, openedAt: now, status: 'open', resolution: '' });
+        }
+      });
+      this.issueLog.filter(function (i) { return i.invoiceId === res.id && i.status === 'open' && codes.indexOf(i.code) < 0; }).forEach(function (i) {
+        i.status = 'resolved'; i.resolvedAt = now; i.resolution = res.lastAction || 'No longer failing after re-check';
+      });
+    }
+    issueSummary() {
+      const cats = {}, owners = {};
+      this.issueLog.forEach(function (i) {
+        const c = cats[i.code] || (cats[i.code] = { code: i.code, label: i.label, open: 0, resolved: 0 });
+        const o = owners[i.owner] || (owners[i.owner] = { owner: i.owner, open: 0, resolved: 0 });
+        const k = i.status === 'open' ? 'open' : 'resolved'; c[k]++; o[k]++;
+      });
+      const byTotal = function (x, y) { return (y.open + y.resolved) - (x.open + x.resolved); };
+      return { categories: Object.keys(cats).map(function (k) { return cats[k]; }).sort(byTotal), owners: Object.keys(owners).map(function (k) { return owners[k]; }).sort(byTotal),
+        total: this.issueLog.length, open: this.issueLog.filter(function (i) { return i.status === 'open'; }).length };
+    }
+
+    // ---- clerk actions (processing only: report, verify, enter, re-run, close). Clerks never edit POs.
+    reportToOwner(resId, owner, note) {
+      const res = this.getInv(resId);
+      if (res.status !== 'reportable') throw new Error('Only items with open issues can be reported.');
+      res.assignment = { to: owner, note: note || '', by: 'AP clerk', at: Date.now(), response: null };
+      res.status = 'reported';
+      this.log('AP clerk', 'Reported to ' + owner, res.id, res.reasons.map(function (x) { return x.label; }).join('; '));
+      return res;
+    }
+    reportIssue(resId, code, owner, note) {   // the reviewer spots a problem while checking the PDFs
+      const res = this.getInv(resId);
+      if (!ISSUES[code]) throw new Error('Unknown issue category.');
+      if (res.status !== 'awaiting_review') throw new Error('Only invoices waiting for review can be reported this way.');
+      res.manualReasons.push({ id: code, label: ISSUES[code].label, detail: note || 'Reported by the reviewer' });
+      res.reasons = res.reasons.concat([res.manualReasons[res.manualReasons.length - 1]]);
+      this.syncIssues(res);
+      res.assignment = { to: owner, note: note || '', by: 'AP clerk', at: Date.now(), response: null };
+      res.status = 'reported';
+      this.log('AP clerk', 'Reviewer found a discrepancy, reported to ' + owner, res.id, note || '');
+      return res;
+    }
+    /* The invoice team may key the PO number when the invoice itself does not
+       carry one. That is a lookup, not a change: nothing on the PO moves, every
+       check still runs against whatever PO they picked, and a wrong one still
+       fails. They may not redirect an invoice that already quotes a PO, and they
+       may not change anything on the PO itself. Both of those are the
+       purchaser's call and go back to them as a reported issue. */
+    setPONumber(resId, poNumber, who) {
+      const res = this.getInv(resId);
+      if (!poNumber || !String(poNumber).trim()) throw new Error('Enter a PO number.');
+      if (res.invoice.poRef) throw new Error('This invoice already quotes ' + res.invoice.poRef + '. Sending it to a different PO is the purchaser\'s decision: report it instead.');
+      const po = this.erp.getPO(String(poNumber).trim().toUpperCase());
+      if (!po) throw new Error('There is no purchase order ' + poNumber + ' in the ERP.');
+      res.poEnteredBy = (who && who.name) || 'AP clerk'; res.confirmedBy = null;
+      this.log(res.poEnteredBy, 'Keyed the PO number missing from the invoice', res.id, po.number + ' (no change made to the PO)');
+      return this.evaluateInvoice(res, po.number);
+    }
+    rerun(resId) {
+      const res = this.getInv(resId);
+      res.manualReasons = res.manualReasons.filter(function (x) { return x.id !== 'ENTRY_FAILED'; });
+      this.log('AP clerk', 'Re-ran checks', res.id, '');
+      return this.evaluateInvoice(res);
+    }
+    /* Recompute what the screens show against the ERP as it stands right now,
+       without moving anything through the workflow. A PO balance can change
+       between intake and review, because another invoice may have been entered
+       against the same PO in the meantime. The reviewer and the project manager
+       must see the balance as it is now, not as it was when the mail arrived.
+       Anything already entered or finished is left alone: its figures are
+       whatever was posted. */
+    refreshView() {
+      const live = ['awaiting_review', 'reportable', 'reported', 'owner_responded', 'on_hold'];
+      const self = this;
+      this.invoices.forEach(function (res) {
+        if (live.indexOf(res.status) < 0) return;
+        const r = self.runChecks(res);
+        res.checks = r.checks; res.po = r.po; res.comparison = r.comparison; res.suggestions = r.suggestions;
+        res.reasons = r.reasons.concat(res.manualReasons);
+        res.stale = res.status !== 'awaiting_review' && res.reasons.length === 0;
+      });
+    }
+    closeInvoice(resId, reason) {
+      const res = this.getInv(resId);
+      res.status = 'closed'; res.closeReason = reason || ''; res.lastAction = 'Closed: ' + (reason || 'no reason given');
+      this.issueLog.filter(function (i) { return i.invoiceId === res.id && i.status === 'open'; }).forEach(function (i) { i.status = 'resolved'; i.resolvedAt = Date.now(); i.resolution = res.lastAction; });
+      this.log('AP clerk', 'Closed invoice', res.id, reason || '');
+    }
+    reviewerVerify(resId) {
+      const res = this.getInv(resId);
+      if (res.status !== 'awaiting_review') throw new Error('This invoice is not waiting for review.');
+      this.log('AP clerk', 'Verified invoice and PO against the PDFs', res.id, res.invoice.invoiceNo);
+      return this.botEnter(res, 'bot');
+    }
+    enterManually(resId) {
+      const res = this.getInv(resId);
+      if (res.status !== 'awaiting_review') throw new Error('This invoice is not waiting for review.');
+      this.log('AP clerk', 'Verified invoice and PO, entering manually', res.id, res.invoice.invoiceNo);
+      return this.botEnter(res, 'manual');
+    }
+    botEnter(res, mode) {
+      const actor = mode === 'bot' ? 'ERP bot' : 'AP clerk (manual)';
+      const re = this.runChecks(res), reasons = re.reasons.concat(res.manualReasons);
+      if (reasons.length) {
+        this.evaluateInvoice(res);
+        res.note = 'Checked again just before entry and something had changed since review. Nothing was entered.';
+        this.log(actor, 'Stopped before entry: re-check found ' + reasons.map(function (x) { return x.id; }).join(', '), res.id, '');
+        return res;
+      }
+      const po = re.po, inv = res.invoice;
+      const je = { lines: [
+        { acct: po.coding.gl, name: GL[po.coding.category].name, job: po.jobId, costCode: po.coding.costCode, dr: inv.total, cr: 0 },
+        { acct: '2000', name: 'Accounts payable', vendor: res.vendor.name, dr: 0, cr: inv.total }] };
+      je.balanced = sum(je.lines.map(function (l) { return l.dr; })) === sum(je.lines.map(function (l) { return l.cr; }));
+      const rec = this.erp.enterVoucher(inv, po, je, mode, mode === 'bot' && this.glitch);
+      const rb = this.erp.readBack(rec.voucher);
+      const ok = je.balanced && rb.total === inv.total && rb.vendorId === po.vendorId && rb.invoiceNo === inv.invoiceNo && rb.poNumber === po.number;
+      if (!ok) {
+        this.erp.voidVoucher(rec.voucher);
+        res.manualReasons.push({ id: 'ENTRY_FAILED', label: ISSUES.ENTRY_FAILED.label, detail: 'Read-back showed a total of ' + usd(rb.total) + ' but the invoice says ' + usd(inv.total) + '. Voucher ' + rec.voucher + ' was voided and the PO balance restored.' });
+        this.evaluateInvoice(res);
+        this.log(actor, 'Read-back did not match, voucher voided', res.id, rec.voucher);
+        return res;
+      }
+      res.voucher = rec.voucher; res.je = je; res.entryMode = mode; res.enteredAt = Date.now(); res.status = 'awaiting_pm_approval';
+      res.steps.push({ name: mode === 'bot' ? 'Bot entry' : 'Manual entry', ok: true, detail: 'Entered as ' + rec.voucher + '. Read-back matched. PDF copy attached for PM approval.' });
+      this.log(actor, 'Entered voucher, read-back matched, PDF attached for PM approval', res.id, rec.voucher + ' → ' + po.number + ' / ' + usd(inv.total));
+      return res;
+    }
+
+    // ---- project manager / original purchaser actions. Only these can change a PO or accept a difference.
+    requirePM(who, reason) {
+      if (!who || who.role !== 'pm') throw new Error('Only the project manager or original purchaser can do this. The invoice team can report and process, not change POs or accept differences.');
+      if (!reason || !String(reason).trim()) throw new Error('A reason is required and is logged.');
+    }
+    /* A project manager may only act on their own job, or on a PO they raised
+       themselves. Another job's PM is not a substitute signature. */
+    requireOwnJob(who, res) {
+      const jobId = (res.po && res.po.jobId) || res.invoice.jobId;
+      const job = jobId ? this.erp.getJob(jobId) : null;
+      const purchaser = res.po && res.po.purchaser;
+      if (job && job.pm === who.name) return;
+      if (purchaser && purchaser === who.name) return;
+      const owner = (job && job.pm) || purchaser;
+      if (!owner) return;   // no job and no PO yet: any PM can pick it up
+      throw new Error('This belongs to ' + owner + ', not you. Only the job\'s project manager or the original purchaser can sign this off.');
+    }
+    changePO(po, addSub, addFreight, reason, who) {
+      const job = this.erp.getJob(po.jobId), before = { subtotal: po.subtotal, tax: po.tax, freight: po.freight || 0, total: po.total };
+      if (addSub > 0) po.lines.push({ desc: 'Change order: ' + reason, qty: 1, unit: 'LS', unitPrice: addSub, amount: addSub });
+      po.subtotal = r2(po.subtotal + addSub); po.freight = r2((po.freight || 0) + addFreight);
+      po.tax = expectedTax(job, po.coding.category, po.subtotal);
+      po.total = r2(po.subtotal + po.tax + po.freight);
+      const b = this.erp.getBudget(po.jobId, po.coding.costCode); if (b) b.committed = r2(b.committed + (po.total - before.total));
+      if (po.status === 'closed' && r2(po.total - po.billed) > 0.005) po.status = 'open';
+      po.changes = po.changes || []; po.changes.push({ at: Date.now(), by: who.name, reason: reason, before: before, after: { subtotal: po.subtotal, tax: po.tax, freight: po.freight, total: po.total } });
+      this.log('PM ' + who.name, 'Changed PO with sign-off', po.number, usd(before.total) + ' → ' + usd(po.total) + '. Reason: ' + reason);
+    }
+    ownerRespond(resId, action, reason, who, params) {
+      this.requirePM(who, reason);
+      params = params || {};
+      const res = this.getInv(resId);
+      this.requireOwnJob(who, res);
+      if (res.status !== 'reported') throw new Error('This item has not been reported to a project manager.');
+      let label;
+      if (action === 'correct_po') {
+        if (!res.po) throw new Error('There is no PO to change. Use "Confirm this PO" instead.');
+        const addSub = Number(params.addSubtotal) || 0, addFr = Number(params.addFreight) || 0;
+        if (addSub <= 0 && addFr <= 0) throw new Error('Enter how much to add to the PO subtotal or freight.');
+        this.changePO(res.po, addSub, addFr, reason, who); label = 'PO changed by ' + who.name;
+      } else if (action === 'use_po') {
+        if (!this.erp.getPO(params.poNumber)) throw new Error('That PO does not exist.');
+        res.assignedPO = params.poNumber; res.confirmedBy = who.name; label = 'PO ' + params.poNumber + ' confirmed by ' + who.name;
+      } else if (action === 'valid_proceed') {
+        const codes = res.reasons.map(function (x) { return x.id; }).filter(function (c) { return OVERRIDABLE[c]; });
+        if (!codes.length) throw new Error('None of the open issues can be accepted as-is. Change the PO or dispute with the vendor.');
+        res.override = { codes: codes, by: who.name, reason: reason }; label = 'Difference accepted by ' + who.name;
+      } else if (action === 'fixed') {
+        res.manualReasons = res.manualReasons.filter(function (x) { return x.id !== 'REVIEW_FOUND' && x.id !== 'PM_REJECTED'; }); label = 'Confirmed OK by ' + who.name;
+      } else if (action === 'dispute') {
+        res.hold = 'Disputed with the vendor'; label = 'Disputing with vendor (' + who.name + ')';
+      } else if (action === 'credit_memo') {
+        res.hold = 'Waiting for a corrected invoice or credit memo'; label = 'Corrected invoice or credit memo requested (' + who.name + ')';
+      } else if (action === 'reject') {
+        res.status = 'rejected'; label = 'Do not pay (' + who.name + ')';
+      } else throw new Error('Unknown action.');
+      const response = { action: action, label: label, reason: reason, by: who.name, at: Date.now() };
+      res.assignment.response = response; res.responses.push(response); res.lastAction = label + '. ' + reason;
+      if (action === 'dispute' || action === 'credit_memo') res.status = 'on_hold';
+      else if (action !== 'reject') res.status = 'owner_responded';
+      if (action === 'reject') this.issueLog.filter(function (i) { return i.invoiceId === res.id && i.status === 'open'; }).forEach(function (i) { i.status = 'resolved'; i.resolvedAt = Date.now(); i.resolution = res.lastAction; });
+      this.log('PM ' + who.name, label, res.id, reason);
+      return res;
+    }
+    pmApprove(resId, who, note) {
+      this.requirePM(who, note || 'Approved');
+      const res = this.getInv(resId);
+      this.requireOwnJob(who, res);
+      if (res.status !== 'awaiting_pm_approval') throw new Error('This invoice is not waiting for PM approval.');
+      res.status = 'approved'; res.approvedBy = who.name; this.erp.approveVoucher(res.voucher);
+      this.log('PM ' + who.name, 'Approved voucher after reviewing the PDF', res.id, res.voucher);
+      return res;
+    }
+    pmReject(resId, who, reason) {
+      this.requirePM(who, reason);
+      const res = this.getInv(resId);
+      this.requireOwnJob(who, res);
+      if (res.status !== 'awaiting_pm_approval') throw new Error('This invoice is not waiting for PM approval.');
+      const v = res.voucher; this.erp.voidVoucher(v);
+      res.voucher = null; res.je = null;
+      res.manualReasons.push({ id: 'PM_REJECTED', label: ISSUES.PM_REJECTED.label, detail: who.name + ' rejected voucher ' + v + ': ' + reason + '. Voucher voided and PO balance restored.' });
+      this.evaluateInvoice(res);
+      this.log('PM ' + who.name, 'Rejected voucher, voided', res.id, v + '. ' + reason);
+      return res;
+    }
+  }
+
+  const API = {
+    CFG: CFG, CATEGORIES: CATEGORIES, TYPE_TO_CAT: TYPE_TO_CAT, GL: GL,
+    r2: r2, pm: pm, usd: usd, isoDate: isoDate, similarity: similarity, normInvoiceNo: normInvoiceNo, expectedTax: expectedTax,
+    seedData: seedData, matchVendor: matchVendor, ISSUES: ISSUES, PCLASS: PCLASS, PTYPES: PTYPES, ptypeById: ptypeById, CAP_THRESHOLD: CAP_THRESHOLD, PREPAID_ACCT: PREPAID, CAPITAL_ACCT: CAPITAL_ACCT, OVERRIDABLE: OVERRIDABLE, splitPages: splitPages, checkSplit: checkSplit, classifyDocument: classifyDocument, poRemaining: poRemaining, MockERP: MockERP, Workflow: Workflow,
+    parseQuoteText: parseQuoteText, parseInvoiceText: parseInvoiceText, looksLikeInvoice: looksLikeInvoice,
+    validateRequisition: validateRequisition, todayISO: todayISO
+  };
+  root.Req2PO = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Fictional sample requisitions, quotes and invoice emails used by the demo and the tests. */
+(function (root) {
+  'use strict';
+
+  const quote = {
+    metro:
+`METRO SAFETY SUPPLY
+Quote # MS-5521    Date: 10/28/2026    Valid through: 11/27/2026
+Project: Riverside Medical Office (24-101)
+Description | Qty | Unit | Unit Price | Amount
+Fall protection kit, harness and lanyard | 12 | EA | 100.00 | 1,200.00
+Subtotal 1,200.00
+Sales tax (7.0%) 84.00
+Total 1,284.00`,
+    ridgeline:
+`RIDGELINE CONCRETE SUPPLY
+Quote # Q-88214    Date: 10/26/2026    Valid through: 11/25/2026
+Project: Riverside Medical Office (24-101)
+Description | Qty | Unit | Unit Price | Amount
+Ready-mix concrete 4000 PSI, slab on grade | 120 | CY | 148.00 | 17,760.00
+Pump truck, 4 hour minimum | 1 | EA | 950.00 | 950.00
+Subtotal 18,710.00
+Sales tax (7.0%) 1,309.70
+Total 20,019.70`,
+    keystone:
+`KEYSTONE STEEL & REBAR
+Quote # KS-3307    Date: 10/27/2026    Valid through: 11/26/2026
+Project: Elm Street Warehouse (24-107)
+Description | Qty | Unit | Unit Price | Amount
+Rebar #4 grade 60, cut and bent | 9000 | LB | 0.50 | 4,500.00
+Subtotal 4,500.00
+Sales tax (7.0%) 315.00
+Total 4,815.00`
+  };
+
+  const scenarios = [
+    { id: 'clean', label: 'Clean request', blurb: 'Everything lines up. The bot creates the PO without a human.',
+      form: { vendorName: 'Metro Safety Supply', dateNeeded: '2026-11-04', type: 'material', subtype: 'Fall protection kits', jobId: '24-101', costCode: '01-560', category: 'M', price: '1200', notes: 'Needed before deck work starts' },
+      quote: quote.metro },
+    { id: 'mismatch', label: 'Quote ≠ form', blurb: 'The quote has a pump truck the PM did not mention. Over the auto limit.',
+      form: { vendorName: 'Ridgeline Concrete', dateNeeded: '2026-11-09', type: 'material', subtype: 'Slab pour, level 1', jobId: '24-101', costCode: '03-300', category: 'M', price: '17000', notes: '' },
+      quote: quote.ridgeline },
+    { id: 'exempt', label: 'Tax-exempt job', blurb: 'The vendor charged tax on a tax-exempt job, and the cost code is nearly out of budget.',
+      form: { vendorName: 'Keystone Steel', dateNeeded: '2026-11-12', type: 'material', subtype: 'Rebar for footings', jobId: '24-107', costCode: '05-120', category: 'M', price: '4500', notes: '' },
+      quote: quote.keystone },
+    { id: 'capital', label: 'Overhead: should be capitalized', blurb: 'An equipment purchase over the capitalization threshold. The system says depreciate it, do not expense it.',
+      form: { vendorName: 'Metro Safety Supply', dateNeeded: '2026-11-18', type: 'equipment', subtype: 'Air compressor for the shop', purchaseClass: 'equipment', ptype: 'equip_buy', jobId: '', costCode: '', category: '', price: '6400', notes: 'Shop use, not a job' },
+      quote: null },
+    { id: 'prepaid', label: 'Overhead: covers 12 months', blurb: 'An annual policy. Expensing it in one month overstates this period and understates the next eleven.',
+      form: { vendorName: 'Metro Safety Supply', dateNeeded: '2026-11-20', type: 'other', subtype: 'General liability policy renewal', purchaseClass: 'overhead', ptype: 'insurance', coversMonths: '12', jobId: '', costCode: '', category: '', price: '12000', notes: 'Annual renewal' },
+      quote: null },
+    { id: 'newvendor', label: 'New vendor, wrong code', blurb: 'Vendor not in the master, rental coded to a steel cost code, no quote.',
+      form: { vendorName: 'Pinnacle Rental Co', dateNeeded: '2026-11-03', type: 'equipment', subtype: 'Boom lift, 2 weeks', jobId: '24-101', costCode: '05-120', category: 'E', price: '3200', notes: '' },
+      quote: null },
+    { id: 'closed', label: 'Closed job', blurb: 'Hard stop. The form will not submit to a closed job.',
+      form: { vendorName: 'Metro Safety Supply', dateNeeded: '2026-11-05', type: 'material', subtype: 'Hard hats', jobId: '23-088', costCode: '01-560', category: 'M', price: '400', notes: '' },
+      quote: null }
+  ];
+
+  function inv(vendor, no, date, po, jobLine, rows, subtotal, tax, total, freight) {
+    return [vendor, 'INVOICE', 'Invoice No: ' + no, 'Invoice Date: ' + date, po ? 'PO Number: ' + po : '', jobLine,
+      'Description | Qty | Unit | Unit Price | Amount'].concat(rows)
+      .concat(['Subtotal ' + subtotal, 'Sales Tax ' + tax].concat(freight ? ['Freight ' + freight] : []).concat(['Total Due ' + total, 'Terms: Net 30'])).filter(Boolean).join('\n');
+  }
+
+  const emails = [
+    { id: 'e1', label: 'Clean: second delivery on a PO', from: 'ar@harborelectric.example', subject: 'Invoice HW-30533', received: '10/28/2026',
+      attachment: { name: 'scan_0001.pdf', text: inv('HARBOR ELECTRICAL WHOLESALE', 'HW-30533', '10/28/2026', 'PO-26-0604', 'Job: Riverside Medical Office (24-101)',
+        ['Breakers 20A single-pole | 30 | EA | 35.00 | 1,050.00', 'EMT conduit 3/4 in | 800 | LF | 2.00 | 1,600.00'], '2,650.00', '185.50', '2,920.50', '85.00') } },
+    { id: 'e2', label: 'No PO number on the invoice', from: 'billing@metrosafety.example', subject: 'Your invoice MS-90112', received: '10/28/2026',
+      attachment: { name: 'Invoice-90112.pdf', text: inv('METRO SAFETY SUPPLY', 'MS-90112', '10/27/2026', '', 'Job: Riverside Medical Office (24-101)',
+        ['Safety netting and guardrail posts | 1 | LS | 1,600.00 | 1,600.00'], '1,600.00', '112.00', '1,712.00') } },
+    { id: 'e3', label: 'Invoice quotes the wrong vendor’s PO', from: 'accounts@ridgelineconcrete.example', subject: 'Invoice RC-41002 for PO-26-0611', received: '10/29/2026',
+      attachment: { name: 'RC41002.pdf', text: inv('RIDGELINE CONCRETE SUPPLY', 'RC-41002', '10/29/2026', 'PO-26-0611', 'Job: Riverside Medical Office (24-101)',
+        ['Ready-mix concrete 4000 PSI | 25 | CY | 148.00 | 3,700.00'], '3,700.00', '259.00', '3,959.00') } },
+    { id: 'e4', label: 'Same invoice sent twice', from: 'ar@harborelectric.example', subject: 'RESEND: Invoice HW30418', received: '10/29/2026',
+      attachment: { name: 'HW30418_resend.pdf', text: inv('HARBOR ELECTRICAL WHOLESALE', 'HW30418', '10/15/2026', 'PO-26-0604', 'Job: Riverside Medical Office (24-101)',
+        ['Panelboard 200A 42-circuit | 1 | EA | 2,350.00 | 2,350.00'], '2,350.00', '164.50', '2,514.50') } },
+    { id: 'e5', label: 'Bills more than the PO has left', from: 'ar@summitrentals.example', subject: 'Invoice SE-2290', received: '10/29/2026',
+      attachment: { name: 'SE-2290.pdf', text: inv('SUMMIT EQUIPMENT RENTALS', 'SE-2290', '10/29/2026', 'PO-26-0607', 'Job: Riverside Medical Office (24-101)',
+        ['Scissor lift rental 4 weeks | 4 | WK | 1,125.00 | 4,500.00'], '4,500.00', '315.00', '4,815.00') } },
+    { id: 'e6', label: 'Tax charged on a tax-exempt job', from: 'ar@keystonesteel.example', subject: 'Invoice KS-7710', received: '10/30/2026',
+      attachment: { name: 'KS7710.pdf', text: inv('KEYSTONE STEEL & REBAR', 'KS-7710', '10/30/2026', 'PO-26-0611', 'Job: Elm Street Warehouse (24-107)',
+        ['Rebar #5 grade 60 | 10000 | LB | 0.50 | 5,000.00'], '5,000.00', '350.00', '5,350.00') } },
+    { id: 'e7', label: 'Total does not add up', from: 'accounts@ridgelineconcrete.example', subject: 'Invoice RC-40871', received: '10/30/2026',
+      attachment: { name: 'RC-40871.pdf', text: inv('RIDGELINE CONCRETE SUPPLY', 'RC-40871', '10/30/2026', 'PO-26-0601', 'Job: Riverside Medical Office (24-101)',
+        ['Ready-mix concrete 4000 PSI | 60 | CY | 148.00 | 8,880.00'], '8,880.00', '621.60', '9,502.60') } },
+    { id: 'e11', label: 'One PDF with two invoices (3 pages)', from: 'ar@summitrentals.example', subject: 'October invoices', received: '10/30/2026',
+      attachment: { name: 'Summit_Oct_invoices.pdf', pages: [
+        ['SUMMIT EQUIPMENT RENTALS', 'INVOICE', 'Invoice No: SE-2301', 'Invoice Date: 10/30/2026', 'PO Number: PO-26-0607', 'Job: Riverside Medical Office (24-101)',
+          'Description | Qty | Unit | Unit Price | Amount', 'Scissor lift rental, weeks 3 and 4 | 2 | WK | 1,125.00 | 2,250.00', 'Page 1 of 2'].join('\n'),
+        ['SUMMIT EQUIPMENT RENTALS', 'Invoice No: SE-2301 (continued)', 'Subtotal 2,250.00', 'Sales Tax 157.50', 'Total Due 2,407.50', 'Page 2 of 2'].join('\n'),
+        inv('SUMMIT EQUIPMENT RENTALS', 'SE-2302', '10/30/2026', 'PO-26-0612', 'Job: Elm Street Warehouse (24-107)',
+          ['Telehandler rental 2 weeks | 2 | WK | 2,000.00 | 4,000.00'], '4,000.00', '0.00', '4,000.00')] } },
+    { id: 'e9', label: 'Via a billing platform, similar vendor name', from: 'invoices@billingportal.example', subject: 'Invoice 55210 from Harbor Mechanical', received: '10/30/2026',
+      attachment: { name: 'inv55210.pdf', text: inv('HARBOR MECHANICAL SERVICES LLC', '55210', '10/30/2026', '', 'Job: Riverside Medical Office (24-101)',
+        ['Rooftop unit start-up and inspection | 1 | LS | 850.00 | 850.00'], '850.00', '59.50', '909.50') } },
+    { id: 'e10', label: 'Vendor not on the list', from: 'ar@graniteridgepaving.example', subject: 'Invoice GR-118', received: '10/30/2026',
+      attachment: { name: 'GR118.pdf', text: inv('GRANITE RIDGE PAVING', 'GR-118', '10/30/2026', 'PO-26-0599', 'Job: Elm Street Warehouse (24-107)',
+        ['Asphalt patching | 1 | LS | 2,200.00 | 2,200.00'], '2,200.00', '0.00', '2,200.00') } },
+    { id: 'e8', label: 'Not an invoice (statement)', from: 'ar@harborelectric.example', subject: 'October statement of account', received: '10/30/2026',
+      attachment: { name: 'statement.pdf', text: 'HARBOR ELECTRICAL WHOLESALE\nSTATEMENT OF ACCOUNT\nPeriod: October 2026\nBalance forward 0.00\nCurrent charges 2,514.50' } },
+    { id: 'e12', label: 'Question about a payment (no attachment)', from: 'ar@harborelectric.example', fromName: 'Harbor Electrical Wholesale', subject: 'Payment status for HW-30418?', received: '10/30/2026',
+      body: 'Hi, can you confirm when invoice HW-30418 will be paid? Thanks.' },
+    { id: 'e13', label: 'Past due notice', from: 'ar@summitrentals.example', subject: 'PAST DUE NOTICE: Invoice SE-2150', received: '10/30/2026',
+      attachment: { name: 'SE-2150_pastdue.pdf', text: 'SUMMIT EQUIPMENT RENTALS\nPAST DUE NOTICE\nOur records show the invoice below is unpaid. Please remit.\nInvoice No: SE-2150\nAmount Due 3,150.00' } }
+  ];
+
+  const API = { scenarios: scenarios, emails: emails, quotes: quote };
+  root.Req2POSamples = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>(function(){
+'use strict';
+const R = Req2PO, S = Req2POSamples, usd = R.usd, I = R.ISSUES;
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const val = sel => { const e = $(sel); return e ? e.value : ''; };
+const TODAY = '2026-10-30';
+const ROLES = { clerk: { name: 'AP clerk', role: 'clerk' }, pm1: { name: 'Priya Raman', role: 'pm' }, pm2: { name: 'Marcus Webb', role: 'pm' } };
+const PMS = ['Priya Raman', 'Marcus Webb'];
+const TABS = ['overview', 'inbox', 'review', 'issues', 'requisition', 'statements', 'erp'];
+const time = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+let wf, draft, who = ROLES.clerk, selMail = null, asOf = Date.now(), sample = null, errs = {}, fdraft = {};
+
+function reset(){
+  wf = new R.Workflow({ today: TODAY });
+  draft = { text: '', quote: null, source: '' };
+  selMail = null; errs = {}; fdraft = {}; asOf = Date.now();
+  $('#glitch').checked = false;
+  populate();
+  $('#quote-text').value = ''; $('#quote-read').innerHTML = ''; $('#req-outcome').innerHTML = ''; $('#scn-blurb').textContent = '';
+  clearForm();
+  renderAll();
+}
+function route(){
+  const h = (location.hash || '#overview').slice(1);
+  const tab = TABS.indexOf(h) >= 0 ? h : 'overview';
+  $$('.view').forEach(v => v.classList.toggle('on', v.id === 'view-' + tab));
+  $$('nav.tabs a').forEach(a => { if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- form setup ---------- */
+function populate(){
+  $('#vendorlist').innerHTML = $('#vendorlist2').innerHTML = wf.erp.vendors.map(v => '<option value="' + esc(v.name) + '">').join('');
+  $('#f-job').innerHTML = '<option value="">Choose</option>' + wf.erp.jobs.map(j => '<option value="' + j.id + '">' + esc(j.id + '  ' + j.name + (j.status !== 'open' ? '  (closed)' : '')) + '</option>').join('');
+  $('#f-cc').innerHTML = '<option value="">Choose</option>' + wf.erp.costCodes.map(c => '<option value="' + c.code + '">' + esc(c.code + '  ' + c.desc) + '</option>').join('');
+  $('#f-cat').innerHTML = '<option value="">Choose</option>' + Object.keys(R.CATEGORIES).map(k => '<option value="' + k + '">' + R.CATEGORIES[k] + '</option>').join('');
+  $('#scn').innerHTML = S.scenarios.map(s => '<button type="button" class="small-btn" data-scn="' + s.id + '">' + esc(s.label) + '</button>').join('');
+  $('#f-pclass').innerHTML = Object.keys(R.PCLASS).map(k => '<option value="' + k + '">' + esc(R.PCLASS[k].label) + '</option>').join('');
+  syncClass();
+}
+/* The kind of purchase decides which half of the form applies: a job purchase
+   is coded by job and cost code, anything else by what is being bought. */
+function syncClass(){
+  const cls = $('#f-pclass').value || 'job';
+  $('#pclass-hint').textContent = R.PCLASS[cls] ? R.PCLASS[cls].hint : '';
+  $$('#reqform [data-cls]').forEach(el => { el.hidden = el.dataset.cls.split(' ').indexOf(cls) < 0; });
+  const types = R.PTYPES.filter(t => t.cls === cls);
+  const cur = $('#f-ptype').value;
+  $('#f-ptype').innerHTML = '<option value="">Choose</option>' + types.map(t => '<option value="' + t.id + '">' + esc(t.label) + (t.capital ? ' — may be capital' : '') + (t.periodic ? ' — may cover a period' : '') + '</option>').join('');
+  if (types.some(t => t.id === cur)) $('#f-ptype').value = cur;
+  syncPtype();
+}
+function syncPtype(){
+  const t = R.ptypeById($('#f-ptype').value);
+  const cls = $('#f-pclass').value || 'job';
+  $('#wrap-other').hidden = cls === 'job' || !t || !t.needsReason;
+}
+function readForm(){
+  const cls = $('#f-pclass').value || 'job', isJob = cls === 'job';
+  return { vendorName: $('#f-vendor').value.trim(), dateNeeded: $('#f-date').value, type: $('#f-type').value, subtype: $('#f-subtype').value.trim(),
+    purchaseClass: cls, ptype: isJob ? '' : $('#f-ptype').value, otherReason: isJob ? '' : $('#f-other').value.trim(),
+    coversMonths: isJob ? '' : $('#f-months').value,
+    jobId: isJob ? $('#f-job').value : '', costCode: isJob ? $('#f-cc').value : '', category: isJob ? $('#f-cat').value : '',
+    price: $('#f-price').value, notes: $('#f-notes').value.trim() };
+}
+function fillForm(f){
+  $('#f-vendor').value = f.vendorName; $('#f-date').value = f.dateNeeded; $('#f-type').value = f.type; $('#f-subtype').value = f.subtype;
+  $('#f-pclass').value = f.purchaseClass || 'job'; syncClass();
+  $('#f-ptype').value = f.ptype || ''; syncPtype();
+  $('#f-other').value = f.otherReason || ''; $('#f-months').value = f.coversMonths || '';
+  $('#f-job').value = f.jobId; $('#f-cc').value = f.costCode; $('#f-cat').value = f.category; $('#f-price').value = f.price; $('#f-notes').value = f.notes || '';
+}
+function clearForm(){ fillForm({ vendorName:'', dateNeeded:'', type:'', subtype:'', purchaseClass:'job', ptype:'', otherReason:'', coversMonths:'', jobId:'', costCode:'', category:'', price:'', notes:'' }); }
+document.addEventListener('change', e => {
+  if (!e.target.id) return;
+  if (e.target.id === 'f-pclass') syncClass();
+  if (e.target.id === 'f-ptype') syncPtype();
+});
+
+function loadScenario(id){
+  const s = S.scenarios.find(x => x.id === id); if (!s) return;
+  fillForm(s.form);
+  $('#quote-text').value = s.quote || '';
+  draft = { text: s.quote || '', quote: null, source: '' };
+  $('#scn-blurb').textContent = s.blurb;
+  $('#req-outcome').innerHTML = '';
+  if (s.quote) readQuote(false); else $('#quote-read').innerHTML = '<p class="muted small">No quote attached in this example.</p>';
+}
+
+/* ---------- quote reading ---------- */
+function showQuote(q, source){
+  if (!q) { $('#quote-read').innerHTML = ''; return; }
+  const rows = q.lines.map(l => '<tr><td>' + esc(l.desc) + '</td><td class="r num">' + esc(l.qty) + ' ' + esc(l.unit) + '</td><td class="r num">' + usd(l.unitPrice) + '</td><td class="r num">' + usd(l.amount) + '</td></tr>').join('');
+  $('#quote-read').innerHTML =
+    '<div class="row" style="justify-content:space-between"><b>What the system read</b><span class="pill idle">' + esc(source) + '</span></div>' +
+    '<p class="small muted" style="margin:4px 0 8px">' + esc(q.vendorName || 'Vendor not found') + (q.docNo ? ' · Quote ' + esc(q.docNo) : '') + (q.date ? ' · ' + q.date : '') + (q.validThrough ? ' · valid to ' + q.validThrough : '') + (q.jobId ? ' · job ' + esc(q.jobId) : '') + '</p>' +
+    (q.lines.length ? '<div class="scroll"><table><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Amount</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="notice warn">No line items found. A reviewer would read this one by hand.</div>') +
+    '<table style="margin-top:6px"><tbody><tr><td>Subtotal</td><td class="r num">' + usd(q.subtotal) + '</td></tr><tr><td>Tax' + (q.taxPct ? ' (' + q.taxPct + '%)' : '') + '</td><td class="r num">' + usd(q.tax) + '</td></tr><tr><td><b>Total</b></td><td class="r num"><b>' + usd(q.total) + '</b></td></tr></tbody></table>';
+}
+function readQuote(){
+  const text = $('#quote-text').value;
+  if (!text.trim()) { $('#quote-read').innerHTML = '<div class="notice warn">Paste quote text or choose a file first.</div>'; return; }
+  draft.text = text; draft.quote = R.parseQuoteText(text); draft.source = 'Built-in reader';
+  showQuote(draft.quote, draft.source);
+}
+const QUOTE_PROMPT = 'Extract this vendor quote into JSON. Return ONLY a JSON object with keys: vendorName (string), docNo (string), date (YYYY-MM-DD or null), validThrough (YYYY-MM-DD or null), jobId (like 24-101, or null), lines (array of {desc, qty, unit, unitPrice, amount}), subtotal, tax, total (numbers, or null if absent). Copy numbers exactly as printed. Do not correct, calculate or infer anything that is not printed.\n\nQuote text:\n"""\n';
+const INVOICE_PROMPT = 'Extract this vendor invoice into JSON. Return ONLY a JSON object with keys: vendorName (string), invoiceNo (string), date (YYYY-MM-DD or null), poRef (the purchase order number printed on the invoice, or null), jobId (like 24-101, or null), lines (array of {desc, qty, unit, unitPrice, amount}), subtotal, tax, freight, total (numbers, or null if absent). Copy numbers exactly as printed. Do not correct, calculate or infer anything that is not printed. If there is no PO number, poRef must be null.\n\nInvoice text:\n"""\n';
+function cleanDoc(o){
+  const n = v => (v === null || v === undefined || v === '') ? null : R.pm(v);
+  return { vendorName: String(o.vendorName || ''), docNo: String(o.docNo || ''), invoiceNo: String(o.invoiceNo || ''), date: R.isoDate(o.date), validThrough: R.isoDate(o.validThrough),
+    jobId: o.jobId || null, poRef: o.poRef ? String(o.poRef).toUpperCase() : null, project: '', taxPct: null,
+    lines: (Array.isArray(o.lines) ? o.lines : []).map(l => ({ desc: String(l.desc || ''), qty: n(l.qty) || 0, unit: String(l.unit || ''), unitPrice: n(l.unitPrice) || 0, amount: n(l.amount) || 0 })),
+    subtotal: n(o.subtotal), tax: n(o.tax), freight: n(o.freight), total: n(o.total) };
+}
+async function claudeExtract(prompt, text){
+  const out = await sample.json(prompt + text + '\n"""');
+  return cleanDoc(out);
+}
+async function readQuoteClaude(){
+  const text = $('#quote-text').value;
+  if (!text.trim()) { $('#quote-read').innerHTML = '<div class="notice warn">Paste quote text or choose a file first.</div>'; return; }
+  $('#quote-read').innerHTML = '<p class="muted small">Reading with Claude…</p>';
+  try {
+    draft.text = text; draft.quote = await claudeExtract(QUOTE_PROMPT, text); draft.source = 'Read by Claude';
+    showQuote(draft.quote, draft.source);
+  } catch (e) {
+    $('#quote-read').innerHTML = '<div class="notice warn">Claude could not read this one (' + esc((e && e.message) || 'unavailable') + '). Using the built-in reader instead.</div>';
+    draft.quote = R.parseQuoteText(text); draft.source = 'Built-in reader';
+    $('#quote-read').insertAdjacentHTML('beforeend', '<div style="margin-top:12px"></div>');
+    const holder = document.createElement('div'); $('#quote-read').appendChild(holder);
+    const keep = $('#quote-read').innerHTML; showQuote(draft.quote, draft.source); $('#quote-read').insertAdjacentHTML('afterbegin', keep);
+  }
+}
+
+/* ---------- flags / outcome rendering ---------- */
+function flagsHTML(flags){
+  return flags.map(f => '<div class="flag"><span class="code">' + esc(f.code) + '</span><div>' + esc(f.msg) + '</div><div class="fix">' + esc(f.fix) + '</div></div>').join('');
+}
+function currentQuote(){
+  const text = $('#quote-text').value;
+  if (!text.trim()) return null;
+  if (!draft.quote || draft.text !== text) { draft.text = text; draft.quote = R.parseQuoteText(text); draft.source = 'Built-in reader'; showQuote(draft.quote, draft.source); }
+  return draft.quote;
+}
+function errorsHTML(errs){
+  return '<div class="notice bad"><b>Fix these before submitting</b><ul>' + errs.map(e => '<li>' + esc(e.msg) + '</li>').join('') + '</ul></div>';
+}
+$('#reqform').addEventListener('submit', e => {
+  e.preventDefault();
+  const res = wf.submitRequisition(readForm(), currentQuote());
+  const out = $('#req-outcome');
+  if (!res.ok) { out.innerHTML = errorsHTML(res.errors); }
+  else if (res.req.status === 'po_created') {
+    const po = wf.erp.getPO(res.req.poNumber);
+    out.innerHTML = '<div class="notice ok"><b>' + esc(res.req.id) + ' passed every check. The bot created ' + esc(po.number) + '.</b>' +
+      '<div class="small" style="margin-top:6px">' + esc(res.req.vendorName) + ' · job ' + esc(po.jobId) + ' · cost code ' + esc(po.coding.costCode) + ' · GL ' + esc(po.coding.gl) + '<br>Subtotal ' + usd(po.subtotal) + ' + tax ' + usd(po.tax) + ' = <b>' + usd(po.total) + '</b>. The ERP assigned the PO number and it was written back to the requisition.</div></div>';
+  } else {
+    out.innerHTML = '<div class="notice warn"><b>' + esc(res.req.id) + ' went to the reviewer.</b> No PO has been written yet.' + flagsHTML(res.req.flags) + '<div class="small" style="margin-top:8px"><a href="#queue">Open the reviewer queue</a></div></div>';
+  }
+  renderAll();
+});
+$('#precheck').addEventListener('click', () => {
+  const v = R.validateRequisition(readForm(), currentQuote(), wf);
+  const out = $('#req-outcome');
+  if (v.errors.length) out.innerHTML = errorsHTML(v.errors);
+  else if (!v.flags.length) out.innerHTML = '<div class="notice ok"><b>No flags.</b> This would go straight to the bot. Total with tax: ' + usd(v.amounts.total) + '.</div>';
+  else out.innerHTML = '<div class="notice warn"><b>This would go to the reviewer.</b>' + flagsHTML(v.flags) + '</div>';
+});
+$('#read-quote').addEventListener('click', readQuote);
+$('#read-claude').addEventListener('click', readQuoteClaude);
+$('#quote-file').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { $('#quote-text').value = String(r.result); readQuote(); }; r.readAsText(f);
+});
+$('#quote-text').addEventListener('input', () => { draft.quote = null; });
+
+
+/* ====================== Phase 2: requisition review queue ====================== */
+function flagsListHTML(flags){ return flagsHTML(flags); }
+function renderReqQueue(){
+  const reqs = wf.reqs.filter(r => r.status === 'needs_review');
+  const done = wf.reqs.filter(r => r.status !== 'needs_review');
+  let h = '';
+  if (!reqs.length) h += '<div class="card"><p class="muted">Nothing waiting. Submit a requisition with a problem to see it here.</p></div>';
+  reqs.forEach(r => {
+    const newV = r.flags.some(f => f.code === 'NEW_VENDOR');
+    h += '<div class="card"><div class="row" style="justify-content:space-between"><div><b>' + esc(r.id) + '</b> · ' + esc(r.vendorName) + '<div class="small muted">' + esc(reqWhere(r)) + '</div></div><div class="num"><b>' + usd(r.amounts.total) + '</b></div></div>' +
+      '<div style="margin-top:8px">' + flagsListHTML(r.flags) + '</div>' +
+      '<label for="note-' + r.id + '" style="margin-top:10px">Reviewer note (required to approve with flags)</label><input id="note-' + r.id + '">' +
+      '<div class="inline-err" id="err-' + r.id + '"></div>' +
+      '<div class="row" style="margin-top:10px">' +
+      (newV ? '<button class="small-btn" data-act="rq-addvendor" data-id="' + r.id + '" type="button">Add vendor to master (demo)</button>' : '') +
+      '<button class="primary small-btn" data-act="rq-approve" data-id="' + r.id + '" type="button">Approve and create PO</button>' +
+      '<button class="small-btn" data-act="rq-return" data-id="' + r.id + '" type="button">Return to requester</button>' +
+      '<button class="small-btn" data-act="rq-reject" data-id="' + r.id + '" type="button">Reject</button></div></div>';
+  });
+  if (done.length) h += '<h3 style="margin:20px 0 8px">Resolved</h3><div class="card">' + done.slice(0, 12).map(r => '<div class="row" style="justify-content:space-between;padding:4px 0"><span class="small">' + esc(r.id + ' · ' + r.vendorName + ' · ' + usd(r.amounts.total)) + '</span><span class="pill ' + (r.status === 'po_created' ? 'ok' : 'idle') + '">' + esc(r.status === 'po_created' ? 'PO ' + r.poNumber : r.status) + '</span></div>').join('') + '</div>';
+  $('#req-queue').innerHTML = h;
+}
+$('#req-queue').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act, note = val('#note-' + id);
+  if (act === 'rq-addvendor') {
+    const r = wf.reqs.find(x => x.id === id);
+    const nv = { id: 'V' + (100 + wf.erp.vendors.length), name: r.form.vendorName, aliases: [], emails: [], folder: 'AP/Vendors/' + r.form.vendorName, types: [r.form.type], terms: 'Net 30' };
+    wf.erp.vendors.push(nv); r.vendorId = nv.id; r.vendorName = nv.name; r.flags = r.flags.filter(f => f.code !== 'NEW_VENDOR');
+    wf.log('Reviewer', 'Added vendor to master (W-9 on file)', r.id, nv.name); populate(); renderAll(); return;
+  }
+  if (act === 'rq-approve') {
+    const r = wf.reqs.find(x => x.id === id);
+    if (!r.vendorId) { $('#err-' + id).textContent = 'Add the vendor to the master first.'; return; }
+    if (r.flags.length && !note.trim()) { $('#err-' + id).textContent = 'Add a note. Approvals with open flags are logged.'; return; }
+    wf.approveRequisition(id, note);
+  }
+  if (act === 'rq-return') wf.returnRequisition(id, note);
+  if (act === 'rq-reject') wf.rejectRequisition(id, note);
+  renderAll();
+});
+
+/* ====================== Phase 1: shared helpers ====================== */
+const TYPE = { invoice: ['ok', 'Invoice'], statement: ['idle', 'Statement'], reminder: ['warn', 'Payment reminder'], correspondence: ['idle', 'Correspondence'] };
+const typePill = t => '<span class="pill ' + TYPE[t][0] + '">' + TYPE[t][1] + '</span>';
+const STATUS = { awaiting_review: ['warn', 'Ready for review'], reportable: ['bad', 'Issues to report'], reported: ['warn', 'With owner'], owner_responded: ['ok', 'Owner answered'], on_hold: ['bad', 'On hold'],
+  awaiting_pm_approval: ['warn', 'Awaiting PM approval'], approved: ['ok', 'Approved'], rejected: ['bad', 'Do not pay'], closed: ['idle', 'Closed'] };
+const statusPill = r => '<span class="pill ' + STATUS[r.status][0] + '">' + STATUS[r.status][1] + '</span>';
+const errBox = id => '<div class="inline-err">' + esc(errs[id] || '') + '</div>';
+const sect = (title, n, sub) => '<div class="sect"><h3>' + esc(title) + '</h3><span class="pill idle">' + n + '</span>' + (sub ? '<span class="small muted">' + esc(sub) + '</span>' : '') + '</div>';
+function stepList(steps){
+  return '<div class="pipe">' + steps.map(s => '<div class="s ' + (s.ok ? 'ok' : 'bad') + '">' + (s.ok ? '✓ ' : '✗ ') + esc(s.name) + '</div>').join('') + '</div>' +
+    steps.map(s => '<div class="stepdetail"><b>' + esc(s.name) + '</b> ' + esc(s.detail) + '</div>').join('');
+}
+function ownerSelect(id, def){
+  const list = PMS.concat(['Vendor setup (Purchasing)', 'AP clerk']);
+  if (def && list.indexOf(def) < 0) list.unshift(def);
+  return '<select id="' + id + '">' + list.map(o => '<option' + (o === def ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
+}
+function head(r){
+  const pg = r.multi ? 'pages ' + r.seg.start + (r.seg.end > r.seg.start ? '-' + r.seg.end : '') + ' of the PDF · ' : '';
+  return '<div class="hd"><div><b>' + esc(r.invoice.vendorName || '?') + '</b> · invoice ' + esc(r.invoice.invoiceNo || '?') +
+    '<div class="small muted">' + esc(r.id) + ' · ' + esc(r.email.subject) + ' · ' + pg + (r.source === 'manual' ? 'manual entry · ' : '') + (r.po ? esc(r.po.number) : 'no PO matched') + '</div></div>' +
+    '<div style="text-align:right"><div class="num"><b>' + usd(r.invoice.total) + '</b></div>' + statusPill(r) + '</div></div>';
+}
+function cmpTable(r){
+  if (!r.comparison.length) {
+    const sug = r.suggestions[0];
+    return '<p class="small muted">No PO is matched yet, so there is nothing to compare.' + (sug ? ' Closest open PO for this vendor: ' + esc(sug.number) + ' (' + usd(R.poRemaining(sug).total) + ' left).' : '') + '</p>';
+  }
+  return '<div class="scroll"><table class="cmp"><thead><tr><th>Field</th><th>Purchase order (ERP)</th><th>Invoice</th><th></th></tr></thead><tbody>' +
+    r.comparison.map(c => '<tr class="' + c.status + '"><td class="f">' + esc(c.field) + '</td><td>' + esc(c.po) + '</td><td>' + esc(c.inv) + '</td><td>' +
+      (c.status === 'match' ? '<span class="pill ok">Match</span>' : (c.status === 'mismatch' ? '<span class="pill bad">Does not match</span>' : '')) + '</td></tr>').join('') + '</tbody></table></div>';
+}
+function checksBlock(r, open){
+  const pass = r.checks.filter(c => c.ok).length;
+  return '<details' + (open ? ' open' : '') + '><summary>' + pass + ' of ' + r.checks.length + ' checks passed</summary><div class="scroll"><table><tbody>' +
+    r.checks.map(c => '<tr><td>' + (c.ok ? '<span class="pill ok">' + (c.accepted ? 'Accepted' : 'Pass') + '</span>' : '<span class="pill bad">Fail</span>') + '</td><td>' + esc(c.label) + '</td><td class="small">' + esc(c.detail) + '</td></tr>').join('') + '</tbody></table></div></details>';
+}
+/* The one PO field the invoice team may fill in: the number, when the invoice
+   did not carry one. Everything on the PO itself stays with the purchaser. */
+function poNumberBox(r){
+  if (who.role !== 'clerk' || r.invoice.poRef || !r.reasons.some(x => x.id === 'NO_PO')) return '';
+  const open = wf.erp.pos.filter(p => p.status === 'open');
+  const sugg = (r.suggestions || []).filter(p => p.status === 'open');
+  const rest = open.filter(p => sugg.indexOf(p) < 0);
+  const opt = p => '<option value="' + p.number + '">' + esc(p.number + ' · ' + ((wf.erp.getVendor(p.vendorId) || {}).name || p.vendorId) + ' · job ' + p.jobId + ' · ' + usd(R.poRemaining(p).total) + ' left') + '</option>';
+  return '<div class="subform" style="margin-top:10px"><p class="small" style="margin:0 0 8px"><b>No PO number on the invoice.</b> You can look the number up and key it in. That does not change anything on the PO — every check runs again against the PO you pick, and the wrong one still fails.</p>' +
+    '<div class="formgrid"><div class="full"><label for="sp-' + r.id + '">Purchase order</label><select id="sp-' + r.id + '">' +
+    (sugg.length ? '<optgroup label="Open POs for this vendor and job">' + sugg.map(opt).join('') + '</optgroup>' : '') +
+    (rest.length ? '<optgroup label="All other open POs">' + rest.map(opt).join('') + '</optgroup>' : '') +
+    '</select></div></div><div class="row" style="margin-top:8px"><button class="small-btn" data-act="set-po" data-id="' + r.id + '" type="button">Key in this PO number</button></div></div>';
+}
+function reasonsBlock(r){
+  if (r.stale) return '<div class="reason"><b>Nothing fails the checks any more.</b><div class="small">The PO data has changed since this was reported. Re-run the checks to clear it.</div></div>';
+  return r.reasons.map(x => '<div class="reason"><span class="code">' + esc(x.id) + '</span> <b>' + esc(x.label) + '</b><div class="small">' + esc(x.detail) + '</div></div>').join('');
+}
+function poDoc(po){
+  if (!po) return '';
+  const rem = R.poRemaining(po), v = wf.erp.getVendor(po.vendorId) || {}, job = wf.erp.getJob(po.jobId) || {};
+  return '<details><summary>Purchase order ' + esc(po.number) + '</summary><div class="small" style="margin:8px 0"><b>' + esc(po.number) + '</b> · ' + esc(v.name) + ' (' + esc(po.vendorId) + ') · job ' + esc(po.jobId) + ' ' + esc(job.name) +
+    ' · purchaser ' + esc(po.purchaser) + ' · created ' + esc(po.createdDate) + ' · cost code ' + esc(po.coding.costCode) + ' · GL ' + esc(po.coding.gl) + '</div>' +
+    '<div class="scroll"><table><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>' + po.lines.map(l => '<tr><td>' + esc(l.desc) + '</td><td class="r num">' + esc(l.qty) + ' ' + esc(l.unit) + '</td><td class="r num">' + usd(l.amount) + '</td></tr>').join('') + '</tbody></table></div>' +
+    '<table style="margin-top:6px"><thead><tr><th></th><th class="r">PO</th><th class="r">Billed</th><th class="r">Left</th></tr></thead><tbody>' +
+    '<tr><td>Subtotal</td><td class="r num">' + usd(po.subtotal) + '</td><td class="r num">' + usd(po.billedSub) + '</td><td class="r num">' + usd(rem.sub) + '</td></tr>' +
+    '<tr><td>Sales tax</td><td class="r num">' + usd(po.tax) + '</td><td class="r num">' + usd(po.billedTax) + '</td><td class="r num">' + usd(rem.tax) + '</td></tr>' +
+    '<tr><td>Freight</td><td class="r num">' + usd(po.freight || 0) + '</td><td class="r num">' + usd(po.billedFreight) + '</td><td class="r num">' + usd(rem.freight) + '</td></tr>' +
+    '<tr><td><b>Total</b></td><td class="r num"><b>' + usd(po.total) + '</b></td><td class="r num">' + usd(po.billed) + '</td><td class="r num"><b>' + usd(rem.total) + '</b></td></tr></tbody></table>' +
+    (po.changes ? '<p class="small" style="margin-top:8px"><b>Changes</b></p>' + po.changes.map(c => '<div class="small">' + esc(c.by) + ' · ' + time(c.at) + ' · ' + usd(c.before.total) + ' → ' + usd(c.after.total) + ' · ' + esc(c.reason) + '</div>').join('') : '') + '</details>';
+}
+const invDoc = r => '<details><summary>Invoice PDF as received' + (r.multi ? ' (pages ' + r.seg.start + ' to ' + r.seg.end + ')' : '') + '</summary><pre>' + esc(r.pageText) + '</pre></details>';
+function jeTable(je){
+  return '<div class="scroll"><table><thead><tr><th>Account</th><th class="r">Debit</th><th class="r">Credit</th></tr></thead><tbody>' + je.lines.map(l => '<tr><td>' + esc(l.acct + ' ' + l.name) + '<div class="small muted">' + (l.job ? 'Job ' + esc(l.job) + ' · ' + esc(l.costCode) : esc(l.vendor)) + '</div></td><td class="r num">' + (l.dr ? usd(l.dr) : '') + '</td><td class="r num">' + (l.cr ? usd(l.cr) : '') + '</td></tr>').join('') + '</tbody></table></div>';
+}
+
+/* A job requisition is described by its job and cost code; an overhead or
+   equipment one by what it is and where it codes. */
+function reqWhere(r){
+  if (!r.pclass || r.pclass === 'job') return 'Job ' + r.form.jobId + ' ' + r.jobName + ' · code ' + r.form.costCode + ' · ' + R.CATEGORIES[r.form.category];
+  const t = r.treatment || {}, kind = t.kind === 'capital' ? 'capitalize' : (t.kind === 'prepaid' ? 'prepaid, ' + t.months + ' months' : 'expense');
+  return R.PCLASS[r.pclass].label + (r.ptype ? ' · ' + r.ptype.label : '') + ' · ' + t.acct + ' ' + t.name + ' · ' + kind;
+}
+
+/* ====================== Phase 1: inbox ====================== */
+const mailForEmail = id => wf.mails.find(m => m.email.id === id);
+function mailRow(e, m){
+  const att = e.attachment ? e.attachment.name : 'no attachment';
+  return '<div class="mail' + (m && selMail === m.id ? ' sel' : '') + '"><div><div><b>' + esc(e.label || e.subject) + '</b></div><div class="sub">' + esc(e.from || 'keyed in') + ' · ' + esc(e.subject) + ' · ' + esc(att) + '</div></div><div class="row">' +
+    (m ? typePill(m.docType) : '<span class="pill idle">Unread</span>') +
+    (m && m.invoiceIds && m.invoiceIds.length > 1 ? '<span class="pill warn">Split into ' + m.invoiceIds.length + '</span>' : '') +
+    (m ? '<button class="small-btn" data-open-mail="' + m.id + '" type="button">View</button>' : '<button class="small-btn" data-proc="' + e.id + '" type="button">Process</button>') + '</div></div>';
+}
+function renderInbox(){
+  const added = wf.mails.filter(m => !S.emails.some(e => e.id === m.email.id));
+  $('#inbox').innerHTML = S.emails.map(e => mailRow(e, mailForEmail(e.id))).join('') +
+    (added.length ? '<div class="small muted" style="margin-top:12px">Added by you</div>' + added.map(m => mailRow(Object.assign({ label: m.email.subject }, m.email), m)).join('') : '');
+  const m = wf.mails.find(x => x.id === selMail), box = $('#mail-detail');
+  if (!m) { box.innerHTML = '<h3>What happened to this email</h3><p class="muted">Process an email to see how it was sorted, filed and read.</p>'; return; }
+  let h = '<div class="row" style="justify-content:space-between"><h3 style="margin:0">' + esc(m.email.subject) + '</h3>' + typePill(m.docType) + '</div><div style="margin-top:12px">' + stepList(m.steps) + '</div>';
+  if (m.libraryPath) h += '<p class="small" style="margin-top:10px">Saved to the document library: <span class="path">' + esc(m.libraryPath) + '</span></p>';
+  const invs = wf.invoicesFor(m);
+  invs.forEach(r => {
+    h += '<div class="item"><div class="hd"><div><b>' + esc(r.invoice.invoiceNo || '?') + '</b> · ' + esc(r.invoice.vendorName) + '<div class="small muted">' + esc(r.id) + (r.multi ? ' · pages ' + r.seg.start + (r.seg.end > r.seg.start ? '-' + r.seg.end : '') : '') + '</div></div><div style="text-align:right"><div class="num"><b>' + usd(r.invoice.total) + '</b></div>' + statusPill(r) + '</div></div>' +
+      '<div style="margin-top:10px">' + stepList(r.steps.filter(s => s.name !== 'Extract' || true)) + '</div>' +
+      (r.reasons.length ? '<div style="margin-top:8px">' + r.reasons.map(x => '<span class="pill bad" title="' + esc(x.detail) + '">' + esc(x.label) + '</span> ').join('') + '</div>' : '') +
+      '<p class="small" style="margin-top:10px">Library file: <span class="path">' + esc(r.libraryPath) + '</span></p>' +
+      '<div class="row" style="margin-top:8px"><a href="#review"><button class="small-btn" type="button">Open in Review and entry</button></a></div></div>';
+  });
+  const fu = wf.followUps.find(f => f.mailId === m.id);
+  if (fu) h += '<div class="' + (fu.needsAction ? 'sent' : 'resp') + '"><b>Follow-up ' + esc(fu.id) + '.</b> ' + esc(fu.note) + '</div>';
+  if (m.docType === 'statement') h += '<div class="resp">Recognized as a statement. It is filed with the vendor and queued for <a href="#statements">Phase 3</a>. Nothing is entered.</div>';
+  const pages = m.email.attachment ? (m.email.attachment.pages || [m.email.attachment.text]) : [];
+  h += '<details style="margin-top:14px"><summary>Email as received</summary><pre>From: ' + esc(m.email.from || '(keyed in)') + '\nSubject: ' + esc(m.email.subject) + '\n' + (m.email.body ? '\n' + esc(m.email.body) + '\n' : '') + (m.email.attachment ? '\nAttachment: ' + esc(m.email.attachment.name) + '\n\n' + pages.map((p, i) => (pages.length > 1 ? '--- page ' + (i + 1) + ' ---\n' : '') + esc(p)).join('\n') : '') + '</pre></details>';
+  box.innerHTML = h;
+}
+function processEmailObj(e){ const m = wf.processEmail(e); selMail = m.id; renderAll(); }
+$('#inbox').addEventListener('click', e => {
+  const p = e.target.closest('[data-proc]'), o = e.target.closest('[data-open-mail]');
+  if (p) processEmailObj(S.emails.find(x => x.id === p.dataset.proc));
+  if (o) { selMail = o.dataset.openMail; renderAll(); }
+});
+$('#proc-all').addEventListener('click', () => {
+  let first = null;
+  S.emails.forEach(e => { if (!mailForEmail(e.id)) { const m = wf.processEmail(e); if (!first) first = m.id; } });
+  selMail = first || selMail; renderAll();
+});
+$('#manual-run').addEventListener('click', () => {
+  const num = id => { const v = val(id); return v === '' ? null : Number(v); };
+  const vendorName = val('#m-vendor').trim(), invoiceNo = val('#m-no').trim(), date = val('#m-date'), total = num('#m-tot');
+  if (!vendorName || !invoiceNo || !date || total === null) { $('#manual-err').textContent = 'Vendor, invoice number, date and total are required.'; return; }
+  $('#manual-err').textContent = '';
+  processEmailObj({ id: 'manual-' + Date.now(), subject: 'Manual entry: ' + invoiceNo, from: '', manual: { vendorName: vendorName, invoiceNo: invoiceNo, date: date, poRef: val('#m-po').trim().toUpperCase() || null, jobId: val('#m-job').trim() || null, subtotal: num('#m-sub'), tax: num('#m-tax'), freight: num('#m-fr'), total: total, lines: [] } });
+});
+function runOwn(parsed){
+  const text = val('#own-inv'); if (!text.trim()) return;
+  const email = { id: 'own-' + Date.now(), subject: 'Pasted invoice', from: '', attachment: { name: 'pasted_invoice.pdf', text: text } };
+  if (parsed) email.parsed = parsed;
+  processEmailObj(email);
+}
+$('#own-run').addEventListener('click', () => runOwn(null));
+$('#own-claude').addEventListener('click', async () => { try { runOwn(await claudeExtract(INVOICE_PROMPT, val('#own-inv'))); } catch (e) { runOwn(null); } });
+
+/* ====================== Phase 1: review and entry ====================== */
+function reportFound(r){
+  const cats = Object.keys(I).filter(k => ['REVIEW_FOUND', 'ITEM_MISMATCH', 'JOB_MISMATCH', 'NO_PO', 'PO_SHORT', 'TAX_RATE', 'FREIGHT', 'DATE', 'MATH'].indexOf(k) >= 0);
+  return '<details style="margin-top:10px"><summary>Report a problem I found in the PDFs</summary><div class="formgrid">' +
+    '<div><label for="rf-cat-' + r.id + '">Category</label><select id="rf-cat-' + r.id + '">' + cats.map(k => '<option value="' + k + '">' + esc(I[k].label) + '</option>').join('') + '</select></div>' +
+    '<div><label for="rf-own-' + r.id + '">Report to</label>' + ownerSelect('rf-own-' + r.id, r.po ? r.po.purchaser : PMS[0]) + '</div>' +
+    '<div class="full"><label for="rf-note-' + r.id + '">What did you see?</label><input id="rf-note-' + r.id + '"></div></div>' +
+    '<div class="row" style="margin-top:8px"><button class="small-btn" data-act="report-found" data-id="' + r.id + '" type="button">Report it</button></div></details>';
+}
+function clerkView(){
+  const by = (...st) => wf.invoices.filter(r => st.indexOf(r.status) >= 0);
+  let h = '';
+  const A = by('awaiting_review');
+  h += sect('Ready for your review', A.length, 'Check the invoice PDF against the PO. Nothing is entered until you send it to the bot.');
+  A.forEach(r => { h += '<div class="item">' + head(r) + '<div style="margin-top:10px">' + cmpTable(r) + '</div><div style="margin-top:8px">' + checksBlock(r, false) + poDoc(r.po) + invDoc(r) + '</div>' +
+    (r.note ? '<div class="sent">' + esc(r.note) + '</div>' : '') +
+    '<div class="row" style="margin-top:12px"><button class="primary small-btn" data-act="verify" data-id="' + r.id + '" type="button">Verified: send to the bot</button><button class="small-btn" data-act="manual" data-id="' + r.id + '" type="button">Enter manually instead</button></div>' + reportFound(r) + errBox(r.id) + '</div>'; });
+  if (!A.length) h += '<p class="muted small">Nothing waiting for review.</p>';
+  const B = by('reportable');
+  h += sect('Issues to report', B.length, 'These did not match. Report each one to the project manager or purchaser. You cannot change POs.');
+  B.forEach(r => {
+    const retry = r.manualReasons.some(x => x.id === 'ENTRY_FAILED');
+    h += '<div class="item">' + head(r) + '<div style="margin-top:8px">' + reasonsBlock(r) + '</div>' + (r.note ? '<div class="sent">' + esc(r.note) + '</div>' : '') +
+      '<div style="margin-top:10px">' + cmpTable(r) + '</div><div style="margin-top:8px">' + checksBlock(r, false) + poDoc(r.po) + invDoc(r) + '</div>' +
+      poNumberBox(r) +
+      '<div class="formgrid"><div><label for="own-' + r.id + '">Report to</label>' + ownerSelect('own-' + r.id, r.suggestedOwner) + '</div><div><label for="rn-' + r.id + '">Note for them</label><input id="rn-' + r.id + '" placeholder="What do you need from them?"></div></div>' +
+      '<div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="report" data-id="' + r.id + '" type="button">Report to owner</button>' +
+      (retry ? '<button class="small-btn" data-act="rerun" data-id="' + r.id + '" type="button">Retry entry</button>' : '') +
+      (r.reasons.some(x => x.id === 'DUPLICATE') ? '<button class="small-btn" data-act="close" data-reason="Duplicate invoice" data-id="' + r.id + '" type="button">Close as duplicate</button>' : '') + '</div>' + errBox(r.id) + '</div>';
+  });
+  if (!B.length) h += '<p class="muted small">No unreported issues.</p>';
+  const C = by('reported', 'on_hold');
+  h += sect('Waiting on others', C.length, 'Reported. The owner responds here, and you re-check once they have.');
+  C.forEach(r => {
+    h += '<div class="item">' + head(r) + '<div class="sent"><b>' + (r.status === 'on_hold' ? esc(r.hold) + '.' : 'Reported to ' + esc(r.assignment.to) + '.') + '</b> ' + (r.assignment.note ? esc(r.assignment.note) : '') +
+      (r.status === 'on_hold' && r.assignment.response ? '<div class="small">' + esc(r.assignment.response.by) + ': ' + esc(r.assignment.response.reason) + '</div>' : '') + '</div>' +
+      '<div style="margin-top:8px">' + reasonsBlock(r) + '</div><div class="row" style="margin-top:10px">' +
+      (r.status === 'on_hold' ? '<button class="small-btn" data-act="close" data-reason="Handled with the vendor" data-id="' + r.id + '" type="button">Close this invoice</button>' : '') +
+      '<button class="small-btn" data-act="try-edit" data-id="' + r.id + '" type="button">Try to change the PO myself (demo)</button></div>' + errBox(r.id) + '</div>';
+  });
+  if (!C.length) h += '<p class="muted small">Nothing waiting on others.</p>';
+  const D = by('owner_responded');
+  h += sect('Answered, ready to re-check', D.length, 'The owner has acted. Run the checks again.');
+  D.forEach(r => { const rp = r.assignment.response; h += '<div class="item">' + head(r) + '<div class="resp"><b>' + esc(rp.label) + '</b><div class="small">' + esc(rp.reason) + ' (' + time(rp.at) + ')</div></div><div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="rerun" data-id="' + r.id + '" type="button">Re-run checks</button></div>' + errBox(r.id) + '</div>'; });
+  if (!D.length) h += '<p class="muted small">None.</p>';
+  const E = by('awaiting_pm_approval');
+  h += sect('Entered, waiting for PM approval', E.length, 'The PM sees the voucher with the PDF attached.');
+  E.forEach(r => { h += '<div class="item">' + head(r) + '<p class="small" style="margin:8px 0"><b>' + esc(r.voucher) + '</b> · entered by ' + (r.entryMode === 'bot' ? 'the bot' : 'the clerk (manual entry)') + ' · read-back matched · PDF copy attached</p>' + jeTable(r.je) + '</div>'; });
+  if (!E.length) h += '<p class="muted small">None.</p>';
+  const F = by('approved', 'rejected', 'closed');
+  if (F.length) h += sect('Finished', F.length) + '<div class="card">' + F.map(r => '<div class="row" style="justify-content:space-between;padding:4px 0"><span class="small">' + esc(r.id + ' · ' + r.invoice.vendorName + ' · ' + r.invoice.invoiceNo + ' · ' + usd(r.invoice.total)) + (r.voucher ? ' · ' + esc(r.voucher) + (r.entryMode === 'manual' ? ' (manual)' : '') : '') + '</span>' + statusPill(r) + '</div>').join('') + '</div>';
+  return h;
+}
+function pmForm(r){
+  const id = r.id, opts = [];
+  /* Work the shortfall out from the PO balance as it stands right now, not from
+     the finding stored at intake: another invoice may have been entered against
+     the same PO since, so a stored number would send the PM to the wrong figure. */
+  const rem = r.po ? R.poRemaining(r.po) : null;
+  const short = rem ? Math.max(0, Math.round((r.invoice.subtotal - rem.sub) * 100) / 100) : 0;
+  if (r.po) opts.push(['correct_po', 'Change the PO (add to the subtotal or freight)'], ['use_po', 'Confirm a different PO']); else opts.push(['use_po', 'Confirm which PO this invoice belongs to']);
+  if (r.reasons.some(x => R.OVERRIDABLE[x.id])) opts.push(['valid_proceed', 'Accept the difference as valid']);
+  if (r.manualReasons.some(x => x.id === 'REVIEW_FOUND' || x.id === 'PM_REJECTED')) opts.push(['fixed', 'Confirm it is correct']);
+  opts.push(['dispute', 'Dispute with the vendor'], ['credit_memo', 'Ask for a corrected invoice or credit memo'], ['reject', 'Do not pay']);
+  let pos = wf.erp.pos.filter(p => p.status === 'open' && (!r.vendor || p.vendorId === r.vendor.id));
+  if (!pos.length) pos = wf.erp.pos.filter(p => p.status === 'open');
+  pos.sort((a, b) => (r.suggestions.indexOf(b) >= 0) - (r.suggestions.indexOf(a) >= 0));
+  return '<div class="pmform"><div class="formgrid"><div class="full"><label for="pm-act-' + id + '">Your response</label><select id="pm-act-' + id + '" data-pmact>' + opts.map(o => '<option value="' + o[0] + '">' + esc(o[1]) + '</option>').join('') + '</select></div>' +
+    '<div data-show="correct_po"><label for="pm-sub-' + id + '">Add to PO subtotal' + (short ? ' (short by ' + usd(short) + ')' : '') + '</label><input id="pm-sub-' + id + '" type="number" step="0.01" min="0"' + (short ? ' value="' + short.toFixed(2) + '"' : '') + '><div class="small muted" style="margin-top:4px">Sales tax on the PO is recalculated at the job rate.</div></div>' +
+    '<div data-show="correct_po"><label for="pm-fr-' + id + '">Add to PO freight</label><input id="pm-fr-' + id + '" type="number" step="0.01" min="0"></div>' +
+    '<div class="full" data-show="use_po"><label for="pm-po-' + id + '">PO</label><select id="pm-po-' + id + '">' + pos.map(p => '<option value="' + p.number + '">' + esc(p.number + ' · job ' + p.jobId + ' · ' + usd(R.poRemaining(p).total) + ' left') + '</option>').join('') + '</select></div>' +
+    '<div class="full"><label for="pm-reason-' + id + '">Reason (required, and logged with your sign-off)</label><textarea id="pm-reason-' + id + '" rows="2" style="font-family:var(--body);font-size:14px"></textarea></div></div>' +
+    '<div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="pm-respond" data-id="' + id + '" type="button">Sign off and send</button></div>' + errBox(id) + '</div>';
+}
+function pmView(){
+  let h = '';
+  const A = wf.invoices.filter(r => r.status === 'reported' && r.assignment.to === who.name);
+  const others = wf.invoices.filter(r => r.status === 'reported' && r.assignment.to !== who.name).length;
+  h += sect('Reported to you', A.length, 'Only you or the original purchaser can change a PO or accept a difference. Every response needs a reason.');
+  A.forEach(r => { h += '<div class="item">' + head(r) + '<div class="sent"><b>From the AP clerk:</b> ' + (r.assignment.note ? esc(r.assignment.note) : 'No note.') + '</div><div style="margin-top:8px">' + reasonsBlock(r) + '</div><div style="margin-top:10px">' + cmpTable(r) + '</div><div style="margin-top:8px">' + poDoc(r.po) + invDoc(r) + '</div>' + pmForm(r) + '</div>'; });
+  if (!A.length) h += '<p class="muted small">Nothing is waiting for you.' + (others ? ' ' + others + ' item' + (others > 1 ? 's are' : ' is') + ' reported to another project manager.' : '') + '</p>';
+  const mine = r => { const j = r.invoice.jobId || (r.po && r.po.jobId); const job = j ? wf.erp.getJob(j) : null; return (job && job.pm === who.name) || (r.po && r.po.purchaser === who.name) || (!job && !(r.po && r.po.purchaser)); };
+  const B = wf.invoices.filter(r => r.status === 'awaiting_pm_approval' && mine(r));
+  const othersV = wf.invoices.filter(r => r.status === 'awaiting_pm_approval' && !mine(r)).length;
+  h += sect('Vouchers waiting for your approval', B.length, 'Entered in the ERP with the invoice PDF attached.' + (othersV ? ' ' + othersV + ' more ' + (othersV > 1 ? 'are' : 'is') + ' waiting for another project manager.' : ''));
+  B.forEach(r => { h += '<div class="item">' + head(r) + '<p class="small" style="margin:8px 0"><b>' + esc(r.voucher) + '</b> · entered by ' + (r.entryMode === 'bot' ? 'the bot' : 'the clerk (manual entry)') + ' · read-back matched</p>' + cmpTable(r) + '<div style="margin-top:8px">' + invDoc(r) + '</div><div style="margin-top:8px">' + jeTable(r.je) + '</div>' +
+    '<div class="formgrid"><div class="full"><label for="pa-' + r.id + '">Note or reason (required to reject)</label><input id="pa-' + r.id + '"></div></div>' +
+    '<div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="pm-approve" data-id="' + r.id + '" type="button">Approve</button><button class="small-btn" data-act="pm-reject" data-id="' + r.id + '" type="button">Reject and void</button></div>' + errBox(r.id) + '</div>'; });
+  if (!B.length) h += '<p class="muted small">None.</p>';
+  return h;
+}
+function renderReview(){
+  wf.refreshView();   // always compare against the PO balance as it stands now
+  $('#review').innerHTML = '<div class="notice" style="margin-bottom:6px"><b>' + (who.role === 'pm' ? 'Project manager view: ' + esc(who.name) : 'AP clerk view') + '.</b> ' +
+    (who.role === 'pm' ? 'You resolve what the invoice team reports, and approve vouchers. Use "Viewing as" at the top to switch roles.' : 'You verify, report and process. You do not change POs. Use "Viewing as" at the top to switch roles.') + '</div>' + (who.role === 'pm' ? pmView() : clerkView());
+  restoreDraft();
+  $$('.pmform').forEach(pmSync);
+}
+/* Keep what a person typed when a validation error re-renders the view:
+   a missing reason should not wipe the amount they already entered. */
+function restoreDraft(){
+  Object.keys(fdraft).forEach(id => { const e = $('#' + id, $('#review')); if (e) e.value = fdraft[id]; else delete fdraft[id]; });
+}
+function clearDraft(id){ Object.keys(fdraft).forEach(k => { if (k.slice(-(id.length + 1)) === '-' + id) delete fdraft[k]; }); }
+$('#review').addEventListener('input', e => { if (e.target.id) fdraft[e.target.id] = e.target.value; });
+$('#review').addEventListener('change', e => { if (e.target.id) fdraft[e.target.id] = e.target.value; });
+function pmSync(form){
+  if (!form) return;
+  const sel = $('select[data-pmact]', form);
+  if (!sel) return;
+  const act = val('#' + sel.id);
+  $$('[data-show]', form).forEach(el => { el.hidden = el.dataset.show.split(' ').indexOf(act) < 0; });
+}
+document.addEventListener('change', e => { if (e.target.matches && e.target.matches('select[data-pmact]')) pmSync(e.target.closest('.pmform')); });
+$('#review').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act; errs[id] = '';
+  try {
+    if (act === 'verify') wf.reviewerVerify(id);
+    else if (act === 'manual') wf.enterManually(id);
+    else if (act === 'report') wf.reportToOwner(id, val('#own-' + id), val('#rn-' + id));
+    else if (act === 'report-found') wf.reportIssue(id, val('#rf-cat-' + id), val('#rf-own-' + id), val('#rf-note-' + id));
+    else if (act === 'rerun') wf.rerun(id);
+    else if (act === 'set-po') wf.setPONumber(id, val('#sp-' + id), who);
+    else if (act === 'close') wf.closeInvoice(id, b.dataset.reason);
+    else if (act === 'try-edit') wf.ownerRespond(id, 'correct_po', 'Trying as the clerk', who, { addSubtotal: 1 });
+    else if (act === 'pm-respond') wf.ownerRespond(id, val('#pm-act-' + id), val('#pm-reason-' + id), who, { addSubtotal: val('#pm-sub-' + id), addFreight: val('#pm-fr-' + id), poNumber: val('#pm-po-' + id) });
+    else if (act === 'pm-approve') wf.pmApprove(id, who, val('#pa-' + id));
+    else if (act === 'pm-reject') wf.pmReject(id, who, val('#pa-' + id));
+    clearDraft(id);
+  } catch (err) { errs[id] = err.message; }
+  renderAll();
+});
+$('#glitch').addEventListener('change', e => { wf.glitch = e.target.checked; });
+function setAsOf(){ $$('.asof').forEach(e => { e.textContent = time(asOf); }); }
+document.addEventListener('click', e => { if (e.target.closest('[data-act="refresh"]')) { asOf = Date.now(); setAsOf(); } });
+setInterval(() => { asOf = Date.now(); setAsOf(); }, 300000);
+
+/* ====================== Phase 1: issues and log ====================== */
+function renderIssues(){
+  const s = wf.issueSummary(), vouchers = wf.invoices.filter(r => r.voucher), manual = vouchers.filter(r => r.entryMode === 'manual').length;
+  let h = '<div class="tiles">' + [['Invoices read', wf.invoices.length], ['Issues found', s.total], ['Still open', s.open], ['Resolved', s.total - s.open], ['Entered' + (manual ? ' (' + manual + ' manual)' : ''), vouchers.length]].map(x => '<div><div class="v">' + x[1] + '</div><div class="small muted">' + x[0] + '</div></div>').join('') + '</div>';
+  h += '<div class="card"><h3>Issues by category</h3>';
+  if (!s.categories.length) h += '<p class="muted small">No issues yet. Process the inbox to see them counted here.</p>';
+  else {
+    const max = Math.max.apply(null, s.categories.map(c => c.open + c.resolved));
+    h += '<div class="legend"><span><i style="background:var(--accent)"></i>Open</span><span><i style="background:var(--ok)"></i>Resolved</span></div>' +
+      s.categories.map(c => '<div class="catrow"><div class="small"><b>' + esc(c.label) + '</b><div class="muted" style="font-family:var(--mono);font-size:11px">' + esc(c.code) + '</div></div><div class="bar"><i class="o" style="width:' + (c.open / max * 100) + '%"></i><i class="r" style="width:' + (c.resolved / max * 100) + '%"></i></div><div class="num small">' + c.open + ' open · ' + c.resolved + ' done</div></div>').join('') +
+      '<p class="small muted" style="margin-top:10px">What it is for: the top categories show where the process breaks. Many "No purchase order found" items point to purchases made without a PO, which is what Phase 2 addresses. Repeated tax issues point to a vendor or a job setup.</p>';
+  }
+  h += '</div>';
+  if (s.owners.length) h += '<div class="card"><h3>Issues by owner</h3><table><thead><tr><th>Owner</th><th class="r">Open</th><th class="r">Resolved</th></tr></thead><tbody>' + s.owners.map(o => '<tr><td>' + esc(o.owner) + '</td><td class="r num">' + o.open + '</td><td class="r num">' + o.resolved + '</td></tr>').join('') + '</tbody></table></div>';
+  if (wf.issueLog.length) h += '<div class="card"><h3>Issue register</h3><div class="scroll"><table><thead><tr><th>ID</th><th>Category</th><th>Invoice</th><th>Owner</th><th>Status</th><th>Resolution</th></tr></thead><tbody>' +
+    wf.issueLog.slice().reverse().slice(0, 40).map(i => { const r = wf.getInv(i.invoiceId); return '<tr><td class="num small">' + esc(i.id) + '</td><td class="small">' + esc(i.label) + '</td><td class="small">' + esc(i.vendor) + '<div class="muted">' + esc(r.invoice.invoiceNo) + ' · ' + esc(i.invoiceId) + '</div></td><td class="small">' + esc(i.owner) + '</td><td><span class="pill ' + (i.status === 'open' ? 'warn' : 'ok') + '">' + i.status + '</span></td><td class="small">' + esc(i.resolution) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
+  h += '<div class="card"><h3>AP invoice log</h3><p class="small muted" style="margin-bottom:8px">Simulates the SharePoint list: one row per invoice, with everything extracted, its status, its owner and its file.</p>';
+  if (!wf.invoices.length) h += '<p class="muted small">Empty. Process the inbox first.</p>';
+  else h += '<div class="scroll"><table><thead><tr><th>ID</th><th>Vendor</th><th>Invoice</th><th>Date</th><th>PO</th><th>Job</th><th class="r">Subtotal</th><th class="r">Tax</th><th class="r">Freight</th><th class="r">Total</th><th>Status</th><th>Issues</th><th>Assigned to</th><th>Entry</th><th>Voucher</th><th>File</th></tr></thead><tbody>' +
+    wf.invoices.slice().reverse().map(r => { const i = r.invoice; return '<tr><td class="num small">' + esc(r.id) + '</td><td class="small">' + esc(i.vendorName) + (r.vendor ? '<div class="muted">' + esc(r.vendor.id) + '</div>' : '') + '</td><td class="small">' + esc(i.invoiceNo) + '</td><td class="small">' + esc(i.date || '') + '</td><td class="small">' + esc(r.po ? r.po.number : (i.poRef || '')) + '</td><td class="small">' + esc(i.jobId || '') + '</td><td class="r num">' + usd(i.subtotal) + '</td><td class="r num">' + usd(i.tax) + '</td><td class="r num">' + usd(i.freight) + '</td><td class="r num">' + usd(i.total) + '</td><td>' + statusPill(r) + '</td><td class="small">' + esc(r.reasons.map(x => x.id).join(', ')) + '</td><td class="small">' + esc(r.assignment ? r.assignment.to : '') + '</td><td class="small">' + (r.voucher ? (r.entryMode === 'manual' ? '<span class="pill warn">Manual</span>' : 'Bot') : (r.source === 'manual' ? '<span class="pill warn">Manual</span>' : '')) + '</td><td class="num small">' + esc(r.voucher || '') + '</td><td class="path">' + esc(r.libraryPath) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  h += '</div>';
+  h += '<div class="card"><h3>Mail log</h3>' + (wf.mails.length ? '<div class="scroll"><table><thead><tr><th>ID</th><th>Subject</th><th>Type</th><th>Filed to</th></tr></thead><tbody>' + wf.mails.slice().reverse().map(m => '<tr><td class="num small">' + esc(m.id) + '</td><td class="small">' + esc(m.email.subject) + '</td><td>' + typePill(m.docType) + '</td><td class="path">' + esc(m.folder) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="muted small">Empty.</p>') + '</div>';
+  h += '<div class="card"><h3>Document library</h3><p class="small muted" style="margin-bottom:8px">Simulates the SharePoint document library: every file saved with a consistent name.</p>' + (wf.library.length ? wf.library.slice().reverse().map(l => '<div class="row" style="justify-content:space-between;padding:3px 0"><span class="path">' + esc(l.path) + '</span><span class="pill idle">' + esc(l.kind) + '</span></div>').join('') : '<p class="muted small">Empty.</p>') + '</div>';
+  $('#issues').innerHTML = h;
+}
+
+/* ====================== Phase 3 placeholder, ERP view, badges ====================== */
+function renderStatements(){
+  $('#statements').innerHTML = wf.statements.length ? '<table><thead><tr><th>Vendor</th><th>Period</th><th>Status</th></tr></thead><tbody>' + wf.statements.map(s => '<tr><td>' + esc(s.vendor) + '<div class="path muted">' + esc(s.file) + '</div></td><td class="small">' + esc(s.period) + '</td><td><span class="pill idle">Filed, waiting for Phase 3</span></td></tr>').join('') + '</tbody></table>' : '<p class="muted small">None yet. Process the inbox, which includes one vendor statement.</p>';
+}
+function renderERP(){
+  const e = wf.erp, vn = id => (e.getVendor(id) || {}).name || id;
+  let h = '<div class="card"><h3>Purchase orders</h3><div class="scroll"><table><thead><tr><th>PO</th><th>Vendor</th><th>Job · code · GL</th><th>Purchaser</th><th class="r">Total</th><th class="r">Billed</th><th class="r">Left</th><th>Left by part</th><th>Status</th></tr></thead><tbody>' +
+    e.pos.slice().reverse().map(p => { const rem = R.poRemaining(p); return '<tr><td class="num">' + p.number + (p.reqId ? '<div class="small muted">' + p.reqId + '</div>' : '') + (p.changes ? '<div class="small muted">changed by PM</div>' : '') + '</td><td>' + esc(vn(p.vendorId)) + '<div class="small muted">' + p.vendorId + '</div></td><td class="small">' + p.jobId + ' · ' + p.coding.costCode + ' · ' + p.coding.gl + '</td><td class="small">' + esc(p.purchaser) + '</td><td class="r num">' + usd(p.total) + '</td><td class="r num">' + usd(p.billed) + '</td><td class="r num">' + usd(rem.total) + '</td><td class="small num">sub ' + usd(rem.sub) + '<br>tax ' + usd(rem.tax) + '<br>frt ' + usd(rem.freight) + '</td><td><span class="pill ' + (p.status === 'open' ? 'ok' : 'idle') + '">' + p.status + '</span></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  h += '<div class="two-col" style="margin-top:16px"><div class="card"><h3>Vouchers entered</h3><div class="scroll"><table><thead><tr><th>Voucher</th><th>Vendor · invoice</th><th>PO</th><th class="r">Amount</th><th>Entry</th><th>Status</th></tr></thead><tbody>' +
+    e.apInvoices.slice().reverse().map(i => '<tr><td class="num small">' + i.voucher + '</td><td class="small">' + esc(vn(i.vendorId)) + '<div class="muted">' + esc(i.invoiceNo) + '</div></td><td class="num small">' + i.poNumber + '</td><td class="r num">' + usd(i.total) + '</td><td class="small">' + (i.mode === 'manual' ? '<span class="pill warn">Manual</span>' : (i.mode === 'bot' ? 'Bot' : 'Prior')) + '</td><td><span class="pill ' + (i.status === 'void' ? 'bad' : (i.status === 'approved' ? 'ok' : 'idle')) + '">' + (i.status || 'posted') + '</span></td></tr>').join('') + '</tbody></table></div></div>' +
+    '<div class="card"><h3>Budget lines</h3><div class="scroll"><table><thead><tr><th>Job · code</th><th class="r">Budget</th><th class="r">Committed</th><th class="r">Left</th></tr></thead><tbody>' +
+    Object.keys(e.budgets).map(k => { const b = e.budgets[k]; return '<tr><td class="num small">' + k.replace('|', ' · ') + '</td><td class="r num">' + usd(b.budget) + '</td><td class="r num">' + usd(b.committed) + '</td><td class="r num">' + usd(R.r2(b.budget - b.committed)) + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>';
+  h += '<div class="card" style="margin-top:16px"><h3>Audit log</h3>' + (wf.audit.length ? '<div class="scroll"><table><thead><tr><th>Time</th><th>Who</th><th>What</th><th>Ref</th><th>Detail</th></tr></thead><tbody>' + wf.audit.slice(0, 150).map(a => '<tr><td class="small num">' + time(a.ts) + '</td><td><span class="pill idle">' + esc(a.actor) + '</span></td><td class="small">' + esc(a.action) + '</td><td class="num small">' + esc(a.ref) + '</td><td class="small">' + esc(a.detail) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="muted">Nothing yet. Every action by the clerk, the project managers, the rules and the bots is logged here with who did it.</p>') + '</div>';
+  $('#erp').innerHTML = h;
+}
+function renderCounters(){
+  const s = wf.issueSummary();
+  $('#counters').innerHTML = [['Invoices read', wf.invoices.length], ['Entered in the ERP', wf.invoices.filter(r => r.voucher).length], ['Open issues', s.open], ['POs from requisitions', wf.reqs.filter(r => r.status === 'po_created').length]]
+    .map(x => '<div><div class="v">' + x[1] + '</div><div class="small muted">' + x[0] + '</div></div>').join('');
+  const mine = who.role === 'pm' ? wf.invoices.filter(r => (r.status === 'reported' && r.assignment.to === who.name) || r.status === 'awaiting_pm_approval').length
+    : wf.invoices.filter(r => ['awaiting_review', 'reportable', 'owner_responded'].indexOf(r.status) >= 0).length;
+  const rn = $('#rn'); rn.textContent = mine; rn.hidden = mine === 0;
+  const q = wf.reqs.filter(r => r.status === 'needs_review').length, qn = $('#qn'); qn.textContent = q; qn.hidden = q === 0;
+}
+function renderAll(){ renderInbox(); renderReview(); renderIssues(); renderReqQueue(); renderStatements(); renderERP(); renderCounters(); setAsOf(); }
+
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-scn]'); if (s) loadScenario(s.dataset.scn);
+  const g = e.target.closest('[data-go-scn]'); if (g) setTimeout(() => loadScenario(g.dataset.goScn), 0);
+});
+$('#role').addEventListener('change', e => { who = ROLES[e.target.value]; renderAll(); });
+$('#reset').addEventListener('click', () => { $('#role').value = 'clerk'; who = ROLES.clerk; reset(); });
+
+try {
+  if (window.claude && window.claude.use) {
+    window.claude.use('sample').then(s => { if (s) { sample = s; $('#read-claude').hidden = false; $('#own-claude').hidden = false; } }).catch(() => {});
+  }
+} catch (e) {}
+
+reset(); route();
+})();
+</script>
+</body>
+</html>
