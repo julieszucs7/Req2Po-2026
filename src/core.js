@@ -774,7 +774,7 @@
           '"' + inv.vendorName + '" is not on the vendor list' + (vmx.suggestion ? ' (closest: ' + vmx.suggestion.name + ')' : '') + '. ' + vmx.reason + '.'));
       const assigned = res.assignedPO;
       let po = null, method = null;
-      if (assigned) { po = erp.getPO(assigned); method = res.confirmedBy ? 'confirmed by ' + res.confirmedBy : (res.poEnteredBy ? 'PO number keyed by ' + res.poEnteredBy + ' (missing from the invoice)' : 'confirmed by the project manager'); }
+      if (assigned) { po = erp.getPO(assigned); method = 'confirmed by ' + (res.confirmedBy || 'the project manager'); }
       else if (inv.poRef) { po = erp.getPO(inv.poRef); method = po ? 'PO number on the invoice' : null; }
       if (!po && vendor) {
         out.suggestions = erp.findOpenPOs({ vendorId: vendor.id, jobId: inv.jobId }).sort(function (x, y) {
@@ -902,22 +902,6 @@
       res.status = 'reported';
       this.log('AP clerk', 'Reviewer found a discrepancy, reported to ' + owner, res.id, note || '');
       return res;
-    }
-    /* The invoice team may key the PO number when the invoice itself does not
-       carry one. That is a lookup, not a change: nothing on the PO moves, every
-       check still runs against whatever PO they picked, and a wrong one still
-       fails. They may not redirect an invoice that already quotes a PO, and they
-       may not change anything on the PO itself. Both of those are the
-       purchaser's call and go back to them as a reported issue. */
-    setPONumber(resId, poNumber, who) {
-      const res = this.getInv(resId);
-      if (!poNumber || !String(poNumber).trim()) throw new Error('Enter a PO number.');
-      if (res.invoice.poRef) throw new Error('This invoice already quotes ' + res.invoice.poRef + '. Sending it to a different PO is the purchaser\'s decision: report it instead.');
-      const po = this.erp.getPO(String(poNumber).trim().toUpperCase());
-      if (!po) throw new Error('There is no purchase order ' + poNumber + ' in the ERP.');
-      res.poEnteredBy = (who && who.name) || 'AP clerk'; res.confirmedBy = null;
-      this.log(res.poEnteredBy, 'Keyed the PO number missing from the invoice', res.id, po.number + ' (no change made to the PO)');
-      return this.evaluateInvoice(res, po.number);
     }
     rerun(resId) {
       const res = this.getInv(resId);

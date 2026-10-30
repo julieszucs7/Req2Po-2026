@@ -374,40 +374,59 @@ t('a project manager cannot approve another PM\'s voucher', () => {
   assert.strictEqual(r.status, 'approved');
 });
 
-t('the clerk may key a PO number the invoice did not carry', () => {
+t('an invoice with no PO goes to the project manager, not to the clerk', () => {
   const w = wf();
   const r = run(w, 'e2').invs[0];                        // MS-90112, no PO on the invoice
   assert.ok(r.reasons.some(x => x.id === 'NO_PO'));
-  w.setPONumber(r.id, 'PO-26-0615', { name: 'AP clerk', role: 'clerk' });
-  assert.strictEqual(r.po.number, 'PO-26-0615');
-  assert.strictEqual(r.status, 'awaiting_review');
-  assert.ok(/keyed by AP clerk/i.test(r.matchMethod), r.matchMethod);
-  assert.ok(w.audit.some(a => /Keyed the PO number/.test(a.action)));
+  assert.strictEqual(r.status, 'reportable');
+  // the clerk has no way to put a PO on it: there is no such method on the workflow
+  assert.strictEqual(typeof w.setPONumber, 'undefined', 'the invoice team must not be able to assign a PO');
+  // and the clerk cannot reach the PM-only route either
+  assert.throws(() => w.ownerRespond(r.id, 'use_po', 'Found it', { name: 'AP clerk', role: 'clerk' }, { poNumber: 'PO-26-0615' }),
+    /Only the project manager or original purchaser/);
+  assert.strictEqual(r.po, null);
 });
-t('keying a PO number changes nothing on the PO itself', () => {
+t('the project manager assigns the PO, and it is recorded against their name', () => {
+  const w = wf();
+  const r = run(w, 'e2').invs[0];
+  w.reportToOwner(r.id, 'Priya Raman', 'No PO on this invoice. Which one should it go to?');
+  assert.strictEqual(r.status, 'reported');
+  w.ownerRespond(r.id, 'use_po', 'This is the fall-protection order', { name: 'Priya Raman', role: 'pm' }, { poNumber: 'PO-26-0615' });
+  assert.strictEqual(r.status, 'owner_responded');
+  assert.ok(/PO-26-0615 confirmed by Priya Raman/.test(r.assignment.response.label), r.assignment.response.label);
+  w.rerun(r.id);
+  assert.strictEqual(r.po.number, 'PO-26-0615');
+  assert.ok(/confirmed by Priya Raman/.test(r.matchMethod), r.matchMethod);
+  assert.ok(w.audit.some(a => /Priya Raman/.test(a.actor)), 'the PM action should be in the audit log');
+});
+t('assigning a PO changes nothing on the PO itself', () => {
   const w = wf();
   const before = JSON.stringify(w.erp.getPO('PO-26-0615'));
   const r = run(w, 'e2').invs[0];
-  w.setPONumber(r.id, 'PO-26-0615', { name: 'AP clerk', role: 'clerk' });
+  w.reportToOwner(r.id, 'Priya Raman', 'no PO');
+  w.ownerRespond(r.id, 'use_po', 'Confirmed', { name: 'Priya Raman', role: 'pm' }, { poNumber: 'PO-26-0615' });
   const after = w.erp.getPO('PO-26-0615');
   assert.strictEqual(after.subtotal, JSON.parse(before).subtotal);
   assert.strictEqual(after.total, JSON.parse(before).total);
 });
-t('the clerk cannot redirect an invoice that already quotes a PO', () => {
+t('a PO the PM assigns is still checked, so the wrong one fails', () => {
   const w = wf();
-  const r = run(w, 'e5').invs[0];                        // SE-2290 quotes PO-26-0607
-  assert.throws(() => w.setPONumber(r.id, 'PO-26-0612', { name: 'AP clerk', role: 'clerk' }), /purchaser's decision/);
-  assert.strictEqual(r.po.number, 'PO-26-0607');
-});
-t('a PO number that does not exist is refused, and a wrong one still fails the checks', () => {
-  const w = wf();
-  const r = run(w, 'e2').invs[0];
-  assert.throws(() => w.setPONumber(r.id, 'PO-26-9999', { name: 'AP clerk', role: 'clerk' }), /no purchase order/i);
-  w.setPONumber(r.id, 'PO-26-0611', { name: 'AP clerk', role: 'clerk' });   // wrong vendor
+  const r = run(w, 'e2').invs[0];                        // Metro Safety Supply
+  w.reportToOwner(r.id, 'Priya Raman', 'no PO');
+  w.ownerRespond(r.id, 'use_po', 'Try this one', { name: 'Priya Raman', role: 'pm' }, { poNumber: 'PO-26-0611' });  // Keystone's PO
+  w.rerun(r.id);
   assert.strictEqual(r.status, 'reportable');
   assert.ok(r.reasons.some(x => x.id === 'VENDOR_MISMATCH'), r.reasons.map(x => x.id).join(','));
 });
-
+t('the other way out is for the PM to put the charges on the PO', () => {
+  const w = wf();
+  const r = run(w, 'e5').invs[0];                        // SE-2290, PO is short
+  w.reportToOwner(r.id, 'Priya Raman', 'PO is short');
+  w.ownerRespond(r.id, 'correct_po', 'Rental extended; adding the balance', { name: 'Priya Raman', role: 'pm' }, { addSubtotal: 2250 });
+  w.rerun(r.id);
+  assert.strictEqual(r.status, 'awaiting_review');
+  assert.ok(r.po.changes.some(c => c.by === 'Priya Raman'));
+});
 /* ---------- Phase 2: classifying what is being bought ---------- */
 const ohForm = (over) => Object.assign({
   vendorName: 'Metro Safety Supply', dateNeeded: '2026-11-15', type: 'material', subtype: 'Office paper and toner',

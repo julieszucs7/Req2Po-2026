@@ -249,9 +249,9 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
     <h3>How Phase 1 works</h3>
     <div class="flow">
       <div class="step"><b>1 · Inbox</b>Mail arrives. It is sorted into invoice, statement, reminder or correspondence and filed to the vendor's folder.</div>
-      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page. Each invoice is read, renamed and saved.</div>
+      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page, found by the invoice number changing partway through. Vendor, invoice number, date, PO number and amounts are read from each one, which is renamed from what was read and saved.</div>
       <div class="step"><b>3 · Compare</b>Each invoice is compared with its PO, which refreshes from the ERP every 5 minutes. Differences are marked.</div>
-      <div class="step human"><b>4 · Report</b>If something does not match, the clerk reports it to the PM or purchaser, who responds.</div>
+      <div class="step human"><b>4 · Report</b>If something does not match, or there is no PO at all, the clerk reports it to the PM or purchaser. They assign the PO, put the charges on it, or resolve it another way — with a reason, logged.</div>
       <div class="step human"><b>5 · Review</b>The reviewer checks the invoice PDF and the PO, then sends it to the bot.</div>
       <div class="step"><b>6 · Enter</b>The bot enters it, re-checks the balance first, and reads back what it entered.</div>
       <div class="step human"><b>7 · Approve</b>The PM sees the voucher with the PDF attached and approves or rejects it.</div>
@@ -268,8 +268,8 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
       <div><b>5 · Everything is logged</b><span>Every action has an actor and a time. The issue report shows where the process breaks.</span></div>
     </div>
     <ul class="tight small" style="margin-top:12px">
-      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO or accept a difference, and each change needs a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
-      <li><b>Duplicates are blocked</b> across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
+      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO, assign one to an invoice that arrived without it, or accept a difference — each with a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
+      <li><b>Duplicates are blocked</b> on the invoice number, normalized first so HW-30418 and HW30418 are read as the same invoice, across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
     </ul>
   </div>
 
@@ -343,6 +343,24 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
   </div>
 
   <div class="card" style="margin-bottom:16px">
+    <h3>Built on a construction model, but the shape is general</h3>
+    <p class="small muted" style="margin-bottom:10px">Every organization that buys things has the same three problems: purchases made without authorization, invoices arriving with nothing to match them against, and statements nobody reconciles. Accounts payable, purchase requisitions and reconciliation are not construction tools. What differs between industries is one thing: the dimension a cost is coded to.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Construction</b> codes to a job and cost code.</li>
+        <li><b>A law firm</b> codes to a client and matter.</li>
+        <li><b>A nonprofit</b> codes to a grant or program, where the restriction matters more than the budget.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Healthcare</b> codes to a location or service line.</li>
+        <li><b>Professional services</b> code to an engagement.</li>
+        <li><b>An organization with no projects at all</b> codes to a department and GL account — which is exactly what the overhead path in Phase 2 already does.</li>
+      </ul>
+    </div>
+    <p class="small" style="margin-top:12px"><b>The checks do not change.</b> Is the vendor known. Is there an authorization to match against. Is there enough left on it. Is the tax right. Is this a duplicate. Does the math add up. Has someone with the authority approved the exception, and is it written down. Only the name of the dimension changes — and in this build that sits behind one adapter, which is the point of putting the logic outside the ERP in the first place.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
     <h3>What replacing the ERP would involve</h3>
     <p class="small muted" style="margin-bottom:12px">Third-party estimates for small and mid-size companies, from consultant and vendor guides rather than independent surveys. Real quotes vary widely, and none of these figures are specific to one company's system.</p>
     <div class="two-col">
@@ -395,7 +413,7 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
     </div>
     <div class="card">
       <h3>What is real and what is mocked</h3>
-      <p class="small"><b>Built and tested here</b> (<span id="testcount">80</span> automated tests)</p>
+      <p class="small"><b>Built and tested here</b> (<span id="testcount">81</span> automated tests)</p>
       <ul class="tight small">
         <li>Mail sorting, PDF splitting, reading, vendor matching against a fixed list</li>
         <li>PO comparison, 15 checks, issue categories, reporting and PM-only PO changes</li>
@@ -1339,7 +1357,7 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
           '"' + inv.vendorName + '" is not on the vendor list' + (vmx.suggestion ? ' (closest: ' + vmx.suggestion.name + ')' : '') + '. ' + vmx.reason + '.'));
       const assigned = res.assignedPO;
       let po = null, method = null;
-      if (assigned) { po = erp.getPO(assigned); method = res.confirmedBy ? 'confirmed by ' + res.confirmedBy : (res.poEnteredBy ? 'PO number keyed by ' + res.poEnteredBy + ' (missing from the invoice)' : 'confirmed by the project manager'); }
+      if (assigned) { po = erp.getPO(assigned); method = 'confirmed by ' + (res.confirmedBy || 'the project manager'); }
       else if (inv.poRef) { po = erp.getPO(inv.poRef); method = po ? 'PO number on the invoice' : null; }
       if (!po && vendor) {
         out.suggestions = erp.findOpenPOs({ vendorId: vendor.id, jobId: inv.jobId }).sort(function (x, y) {
@@ -1467,22 +1485,6 @@ table.cmp tr.match td:last-child,table.cmp tr.mismatch td:last-child{white-space
       res.status = 'reported';
       this.log('AP clerk', 'Reviewer found a discrepancy, reported to ' + owner, res.id, note || '');
       return res;
-    }
-    /* The invoice team may key the PO number when the invoice itself does not
-       carry one. That is a lookup, not a change: nothing on the PO moves, every
-       check still runs against whatever PO they picked, and a wrong one still
-       fails. They may not redirect an invoice that already quotes a PO, and they
-       may not change anything on the PO itself. Both of those are the
-       purchaser's call and go back to them as a reported issue. */
-    setPONumber(resId, poNumber, who) {
-      const res = this.getInv(resId);
-      if (!poNumber || !String(poNumber).trim()) throw new Error('Enter a PO number.');
-      if (res.invoice.poRef) throw new Error('This invoice already quotes ' + res.invoice.poRef + '. Sending it to a different PO is the purchaser\'s decision: report it instead.');
-      const po = this.erp.getPO(String(poNumber).trim().toUpperCase());
-      if (!po) throw new Error('There is no purchase order ' + poNumber + ' in the ERP.');
-      res.poEnteredBy = (who && who.name) || 'AP clerk'; res.confirmedBy = null;
-      this.log(res.poEnteredBy, 'Keyed the PO number missing from the invoice', res.id, po.number + ' (no change made to the PO)');
-      return this.evaluateInvoice(res, po.number);
     }
     rerun(resId) {
       const res = this.getInv(resId);
@@ -2025,20 +2027,6 @@ function checksBlock(r, open){
   return '<details' + (open ? ' open' : '') + '><summary>' + pass + ' of ' + r.checks.length + ' checks passed</summary><div class="scroll"><table><tbody>' +
     r.checks.map(c => '<tr><td>' + (c.ok ? '<span class="pill ok">' + (c.accepted ? 'Accepted' : 'Pass') + '</span>' : '<span class="pill bad">Fail</span>') + '</td><td>' + esc(c.label) + '</td><td class="small">' + esc(c.detail) + '</td></tr>').join('') + '</tbody></table></div></details>';
 }
-/* The one PO field the invoice team may fill in: the number, when the invoice
-   did not carry one. Everything on the PO itself stays with the purchaser. */
-function poNumberBox(r){
-  if (who.role !== 'clerk' || r.invoice.poRef || !r.reasons.some(x => x.id === 'NO_PO')) return '';
-  const open = wf.erp.pos.filter(p => p.status === 'open');
-  const sugg = (r.suggestions || []).filter(p => p.status === 'open');
-  const rest = open.filter(p => sugg.indexOf(p) < 0);
-  const opt = p => '<option value="' + p.number + '">' + esc(p.number + ' · ' + ((wf.erp.getVendor(p.vendorId) || {}).name || p.vendorId) + ' · job ' + p.jobId + ' · ' + usd(R.poRemaining(p).total) + ' left') + '</option>';
-  return '<div class="subform" style="margin-top:10px"><p class="small" style="margin:0 0 8px"><b>No PO number on the invoice.</b> You can look the number up and key it in. That does not change anything on the PO — every check runs again against the PO you pick, and the wrong one still fails.</p>' +
-    '<div class="formgrid"><div class="full"><label for="sp-' + r.id + '">Purchase order</label><select id="sp-' + r.id + '">' +
-    (sugg.length ? '<optgroup label="Open POs for this vendor and job">' + sugg.map(opt).join('') + '</optgroup>' : '') +
-    (rest.length ? '<optgroup label="All other open POs">' + rest.map(opt).join('') + '</optgroup>' : '') +
-    '</select></div></div><div class="row" style="margin-top:8px"><button class="small-btn" data-act="set-po" data-id="' + r.id + '" type="button">Key in this PO number</button></div></div>';
-}
 function reasonsBlock(r){
   if (r.stale) return '<div class="reason"><b>Nothing fails the checks any more.</b><div class="small">The PO data has changed since this was reported. Re-run the checks to clear it.</div></div>';
   return r.reasons.map(x => '<div class="reason"><span class="code">' + esc(x.id) + '</span> <b>' + esc(x.label) + '</b><div class="small">' + esc(x.detail) + '</div></div>').join('');
@@ -2152,7 +2140,6 @@ function clerkView(){
     const retry = r.manualReasons.some(x => x.id === 'ENTRY_FAILED');
     h += '<div class="item">' + head(r) + '<div style="margin-top:8px">' + reasonsBlock(r) + '</div>' + (r.note ? '<div class="sent">' + esc(r.note) + '</div>' : '') +
       '<div style="margin-top:10px">' + cmpTable(r) + '</div><div style="margin-top:8px">' + checksBlock(r, false) + poDoc(r.po) + invDoc(r) + '</div>' +
-      poNumberBox(r) +
       '<div class="formgrid"><div><label for="own-' + r.id + '">Report to</label>' + ownerSelect('own-' + r.id, r.suggestedOwner) + '</div><div><label for="rn-' + r.id + '">Note for them</label><input id="rn-' + r.id + '" placeholder="What do you need from them?"></div></div>' +
       '<div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="report" data-id="' + r.id + '" type="button">Report to owner</button>' +
       (retry ? '<button class="small-btn" data-act="rerun" data-id="' + r.id + '" type="button">Retry entry</button>' : '') +
@@ -2251,7 +2238,6 @@ $('#review').addEventListener('click', e => {
     else if (act === 'report') wf.reportToOwner(id, val('#own-' + id), val('#rn-' + id));
     else if (act === 'report-found') wf.reportIssue(id, val('#rf-cat-' + id), val('#rf-own-' + id), val('#rf-note-' + id));
     else if (act === 'rerun') wf.rerun(id);
-    else if (act === 'set-po') wf.setPONumber(id, val('#sp-' + id), who);
     else if (act === 'close') wf.closeInvoice(id, b.dataset.reason);
     else if (act === 'try-edit') wf.ownerRespond(id, 'correct_po', 'Trying as the clerk', who, { addSubtotal: 1 });
     else if (act === 'pm-respond') wf.ownerRespond(id, val('#pm-act-' + id), val('#pm-reason-' + id), who, { addSubtotal: val('#pm-sub-' + id), addFreight: val('#pm-fr-' + id), poNumber: val('#pm-po-' + id) });

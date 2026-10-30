@@ -256,20 +256,6 @@ function checksBlock(r, open){
   return '<details' + (open ? ' open' : '') + '><summary>' + pass + ' of ' + r.checks.length + ' checks passed</summary><div class="scroll"><table><tbody>' +
     r.checks.map(c => '<tr><td>' + (c.ok ? '<span class="pill ok">' + (c.accepted ? 'Accepted' : 'Pass') + '</span>' : '<span class="pill bad">Fail</span>') + '</td><td>' + esc(c.label) + '</td><td class="small">' + esc(c.detail) + '</td></tr>').join('') + '</tbody></table></div></details>';
 }
-/* The one PO field the invoice team may fill in: the number, when the invoice
-   did not carry one. Everything on the PO itself stays with the purchaser. */
-function poNumberBox(r){
-  if (who.role !== 'clerk' || r.invoice.poRef || !r.reasons.some(x => x.id === 'NO_PO')) return '';
-  const open = wf.erp.pos.filter(p => p.status === 'open');
-  const sugg = (r.suggestions || []).filter(p => p.status === 'open');
-  const rest = open.filter(p => sugg.indexOf(p) < 0);
-  const opt = p => '<option value="' + p.number + '">' + esc(p.number + ' · ' + ((wf.erp.getVendor(p.vendorId) || {}).name || p.vendorId) + ' · job ' + p.jobId + ' · ' + usd(R.poRemaining(p).total) + ' left') + '</option>';
-  return '<div class="subform" style="margin-top:10px"><p class="small" style="margin:0 0 8px"><b>No PO number on the invoice.</b> You can look the number up and key it in. That does not change anything on the PO — every check runs again against the PO you pick, and the wrong one still fails.</p>' +
-    '<div class="formgrid"><div class="full"><label for="sp-' + r.id + '">Purchase order</label><select id="sp-' + r.id + '">' +
-    (sugg.length ? '<optgroup label="Open POs for this vendor and job">' + sugg.map(opt).join('') + '</optgroup>' : '') +
-    (rest.length ? '<optgroup label="All other open POs">' + rest.map(opt).join('') + '</optgroup>' : '') +
-    '</select></div></div><div class="row" style="margin-top:8px"><button class="small-btn" data-act="set-po" data-id="' + r.id + '" type="button">Key in this PO number</button></div></div>';
-}
 function reasonsBlock(r){
   if (r.stale) return '<div class="reason"><b>Nothing fails the checks any more.</b><div class="small">The PO data has changed since this was reported. Re-run the checks to clear it.</div></div>';
   return r.reasons.map(x => '<div class="reason"><span class="code">' + esc(x.id) + '</span> <b>' + esc(x.label) + '</b><div class="small">' + esc(x.detail) + '</div></div>').join('');
@@ -383,7 +369,6 @@ function clerkView(){
     const retry = r.manualReasons.some(x => x.id === 'ENTRY_FAILED');
     h += '<div class="item">' + head(r) + '<div style="margin-top:8px">' + reasonsBlock(r) + '</div>' + (r.note ? '<div class="sent">' + esc(r.note) + '</div>' : '') +
       '<div style="margin-top:10px">' + cmpTable(r) + '</div><div style="margin-top:8px">' + checksBlock(r, false) + poDoc(r.po) + invDoc(r) + '</div>' +
-      poNumberBox(r) +
       '<div class="formgrid"><div><label for="own-' + r.id + '">Report to</label>' + ownerSelect('own-' + r.id, r.suggestedOwner) + '</div><div><label for="rn-' + r.id + '">Note for them</label><input id="rn-' + r.id + '" placeholder="What do you need from them?"></div></div>' +
       '<div class="row" style="margin-top:10px"><button class="primary small-btn" data-act="report" data-id="' + r.id + '" type="button">Report to owner</button>' +
       (retry ? '<button class="small-btn" data-act="rerun" data-id="' + r.id + '" type="button">Retry entry</button>' : '') +
@@ -482,7 +467,6 @@ $('#review').addEventListener('click', e => {
     else if (act === 'report') wf.reportToOwner(id, val('#own-' + id), val('#rn-' + id));
     else if (act === 'report-found') wf.reportIssue(id, val('#rf-cat-' + id), val('#rf-own-' + id), val('#rf-note-' + id));
     else if (act === 'rerun') wf.rerun(id);
-    else if (act === 'set-po') wf.setPONumber(id, val('#sp-' + id), who);
     else if (act === 'close') wf.closeInvoice(id, b.dataset.reason);
     else if (act === 'try-edit') wf.ownerRespond(id, 'correct_po', 'Trying as the clerk', who, { addSubtotal: 1 });
     else if (act === 'pm-respond') wf.ownerRespond(id, val('#pm-act-' + id), val('#pm-reason-' + id), who, { addSubtotal: val('#pm-sub-' + id), addFreight: val('#pm-fr-' + id), poNumber: val('#pm-po-' + id) });

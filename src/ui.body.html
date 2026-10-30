@@ -72,9 +72,9 @@
     <h3>How Phase 1 works</h3>
     <div class="flow">
       <div class="step"><b>1 · Inbox</b>Mail arrives. It is sorted into invoice, statement, reminder or correspondence and filed to the vendor's folder.</div>
-      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page. Each invoice is read, renamed and saved.</div>
+      <div class="step"><b>2 · Split and read</b>A PDF with several invoices is split by page, found by the invoice number changing partway through. Vendor, invoice number, date, PO number and amounts are read from each one, which is renamed from what was read and saved.</div>
       <div class="step"><b>3 · Compare</b>Each invoice is compared with its PO, which refreshes from the ERP every 5 minutes. Differences are marked.</div>
-      <div class="step human"><b>4 · Report</b>If something does not match, the clerk reports it to the PM or purchaser, who responds.</div>
+      <div class="step human"><b>4 · Report</b>If something does not match, or there is no PO at all, the clerk reports it to the PM or purchaser. They assign the PO, put the charges on it, or resolve it another way — with a reason, logged.</div>
       <div class="step human"><b>5 · Review</b>The reviewer checks the invoice PDF and the PO, then sends it to the bot.</div>
       <div class="step"><b>6 · Enter</b>The bot enters it, re-checks the balance first, and reads back what it entered.</div>
       <div class="step human"><b>7 · Approve</b>The PM sees the voucher with the PDF attached and approves or rejects it.</div>
@@ -91,8 +91,8 @@
       <div><b>5 · Everything is logged</b><span>Every action has an actor and a time. The issue report shows where the process breaks.</span></div>
     </div>
     <ul class="tight small" style="margin-top:12px">
-      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO or accept a difference, and each change needs a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
-      <li><b>Duplicates are blocked</b> across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
+      <li><b>Separation of duties:</b> the invoice team can report and process. Only the project manager or original purchaser can change a PO, assign one to an invoice that arrived without it, or accept a difference — each with a reason, a sign-off and a log entry. Switch the viewer to AP clerk and try it: the system refuses.</li>
+      <li><b>Duplicates are blocked</b> on the invoice number, normalized first so HW-30418 and HW30418 are read as the same invoice, across invoices already entered and invoices received but not yet entered. <b>Manual entries</b> are allowed, marked as manual, and checked the same way.</li>
     </ul>
   </div>
 
@@ -163,6 +163,24 @@
         <li><b>It can be swapped later.</b> If the company ever changes ERPs, the requisition and invoice logic moves with it. Only the adapter changes.</li>
       </ul>
     </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h3>Built on a construction model, but the shape is general</h3>
+    <p class="small muted" style="margin-bottom:10px">Every organization that buys things has the same three problems: purchases made without authorization, invoices arriving with nothing to match them against, and statements nobody reconciles. Accounts payable, purchase requisitions and reconciliation are not construction tools. What differs between industries is one thing: the dimension a cost is coded to.</p>
+    <div class="two-col">
+      <ul class="tight">
+        <li><b>Construction</b> codes to a job and cost code.</li>
+        <li><b>A law firm</b> codes to a client and matter.</li>
+        <li><b>A nonprofit</b> codes to a grant or program, where the restriction matters more than the budget.</li>
+      </ul>
+      <ul class="tight">
+        <li><b>Healthcare</b> codes to a location or service line.</li>
+        <li><b>Professional services</b> code to an engagement.</li>
+        <li><b>An organization with no projects at all</b> codes to a department and GL account — which is exactly what the overhead path in Phase 2 already does.</li>
+      </ul>
+    </div>
+    <p class="small" style="margin-top:12px"><b>The checks do not change.</b> Is the vendor known. Is there an authorization to match against. Is there enough left on it. Is the tax right. Is this a duplicate. Does the math add up. Has someone with the authority approved the exception, and is it written down. Only the name of the dimension changes — and in this build that sits behind one adapter, which is the point of putting the logic outside the ERP in the first place.</p>
   </div>
 
   <div class="card" style="margin-bottom:16px">

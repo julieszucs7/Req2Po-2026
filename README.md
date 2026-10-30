@@ -27,7 +27,7 @@ Phase 1 comes first because it changes how one team works and nobody else has to
 ## Phase 1 — what happens to an invoice
 
 1. **Inbox.** Each mail is sorted into invoice, statement, payment reminder or general correspondence, and filed to the vendor's folder.
-2. **Split and read.** A PDF holding several invoices is split by page. Each invoice is read, renamed `VENDOR_INVOICE_DATE_PO.pdf` and saved.
+2. **Split and read.** A PDF holding several invoices is split by page, detected by the invoice number changing partway through. Vendor, invoice number, date, PO number and amounts are read from each one, which is then renamed `VENDOR_INVOICE_DATE_PO.pdf` from what was read, and saved.
 3. **Compare.** Each invoice is compared with its PO: vendor ID, vendor name, job number and name, PO total, subtotal left, sales tax left, freight. PO data refreshes every five minutes, and can be refreshed by hand.
 4. **Report.** Anything that fails becomes an issue with a category and an owner. The owner responds, and the response is logged.
 5. **Review.** A person compares the invoice PDF with the PO before anything is entered.
@@ -51,7 +51,7 @@ That is why the checks run at intake rather than at the end. Catching it here pr
 This is the rule the whole design is built around, and it is enforced in the code, not just in the interface:
 
 - **Only the job's project manager or the original purchaser can change a PO or accept a difference.** The invoice team reports and processes. It does not edit.
-- **One exception, and it is a lookup rather than an edit:** when an invoice arrives with no PO number on it, the invoice team can look the number up and key it in. Nothing on the PO moves, the entry is logged, and all 15 checks run again against the PO they picked — so the wrong one still fails on vendor, job or balance.
+- **An invoice with no PO goes to the project manager, not around them.** The invoice team cannot assign a PO, not even when they know which one it is. They report it; the PM either names the PO the invoice belongs to, or puts the charges on an existing PO. Either way it is their decision, with a reason, logged against their name — and the invoice is then re-checked against whatever they chose, so a wrong PO still fails on vendor, job or balance.
 - **Every change needs a reason**, is signed off, and is written to the audit log with who, what, when and why.
 - **One project manager cannot sign off on another's job.** Attempting it is refused.
 - Switch "Viewing as" to AP clerk and press *Try to change the PO myself* — the system refuses it.
@@ -61,6 +61,8 @@ This is the rule the whole design is built around, and it is enforced in the cod
 15 checks run on every invoice. Each failed check is a category in the issue log, so the counts show where the process actually breaks:
 
 `EXTRACT` `SPLIT` `VENDOR_UNKNOWN` `NO_PO` `VENDOR_MISMATCH` `PO_CLOSED` `JOB_MISMATCH` `DUPLICATE` `MATH` `TAX_RATE` `PO_SHORT` `TAX_SHORT` `FREIGHT` `ITEM_MISMATCH` `DATE` — plus `REVIEW_FOUND`, `ENTRY_FAILED` and `PM_REJECTED` raised by people and by the bot.
+
+Two of those lean on the invoice number in particular. `EXTRACT` fails if the vendor, invoice number, date or total could not be read at all. `DUPLICATE` normalizes the invoice number before comparing — punctuation and spacing removed — so `HW-30418` and `HW30418` are recognized as the same invoice, whether the first copy is already entered or merely sitting in the queue.
 
 Counting them is the point. A month of "No purchase order found" is an argument for Phase 2. A month of tax issues is a vendor or job setup problem.
 
@@ -89,6 +91,27 @@ The system proposes the class, the account and the treatment from the purchase t
 
 ---
 
+## Built on a construction model, but the shape is general
+
+This is built from a construction company's process, because that is the one I know and the one that is running. The components are not specific to construction. Every organization that buys things has the same three problems: purchases made without authorization, invoices that arrive with nothing to match them against, and statements nobody reconciles. Accounts payable, purchase requisitions and reconciliation are valuable anywhere.
+
+What differs between industries is one thing — the dimension a cost is coded to:
+
+| | Codes to |
+|---|---|
+| Construction | Job and cost code |
+| Law firm | Client and matter |
+| Nonprofit | Grant or program, where the restriction matters more than the budget |
+| Healthcare | Location or service line |
+| Professional services | Engagement |
+| An organization with no projects at all | Department and GL account |
+
+That last row is not hypothetical here: it is the overhead path in Phase 2, which already handles purchases that belong to no job and code straight to the general ledger.
+
+The checks themselves do not change. Is the vendor known. Is there an authorization to match against. Is there enough left on it. Is the tax right. Is this a duplicate. Does the math add up. Has someone with the authority approved the exception, and is it written down. Only the name of the dimension changes — and because the logic sits outside the ERP behind one adapter, changing it is a configuration question rather than a rewrite.
+
+---
+
 ## How the real build would run
 
 The demo is an HTML prototype of the logic and the screens. The real build would use the tools the company already licenses:
@@ -110,11 +133,11 @@ That mapping is the plan. It is not built or tested in those tools here.
 
 ## What is real and what is mocked
 
-**Real and tested here (80 automated tests):**
+**Real and tested here (81 automated tests):**
 - Mail sorting, PDF splitting, vendor matching against a fixed list
 - PO comparison, the 15 checks, issue categories, reporting and PM-only PO changes
 - Reviewer verification, bot entry with read-back, PM approval, manual entry marked as manual
-- The one lookup the invoice team may do: keying a PO number the invoice did not carry, logged, with every check re-run against it
+- The no-PO route: reported to the PM, assigned or resolved by them with a logged reason, then re-checked
 - Live re-checking: the screens compare against the PO balance as it stands now, so a balance consumed by another invoice is caught before entry
 - Requisition form, quote cross-check, coding, tax, budget and approval rules
 - Purchase classification: three classes, 16 purchase types, capitalization threshold, prepaid detection, mandatory categorization review
@@ -132,7 +155,7 @@ All data is fictional. No employer data, vendor data or system name appears anyw
 ## Running it
 
 ```bash
-node test/test.js     # 80 tests
+node test/test.js     # 81 tests
 node build.js         # runs the tests, then inlines src/ into index.html
 ```
 
@@ -144,7 +167,7 @@ src/samples.js       fictional vendors, jobs, POs, 13 sample emails
 src/ui.js            screens and event handling
 src/ui.body.html     page structure
 src/ui.css           styles
-test/test.js         80 tests over core.js
+test/test.js         81 tests over core.js
 build.js             runs tests, inlines everything into index.html
 ```
 
